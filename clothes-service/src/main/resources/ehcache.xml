@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ehcache:config xmlns:ehcache="http://www.ehcache.org/v3">
+    <ehcache:cache alias="clothesCache">
+        <ehcache:key-type>today.wishwordrobe.domain.ClothesCacheKey</ehcache:key-type>
+        <ehcache:value-type>today.wishwordrobe.domain.ClothesCacheValue</ehcache:value-type>
+        <ehcache:expiry>
+            <ehcache:ttl unit="minutes">30</ehcache:ttl>
+        </ehcache:expiry>
+        <ehcache:resources>
+            <ehcache:heap>100</ehcache:heap>
+            <ehcache:offheap unit="MB">10</ehcache:offheap>
+        </ehcache:resources>
+    </ehcache:cache>
+</ehcache:config>
