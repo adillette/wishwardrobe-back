@@ -1,33 +1,32 @@
 package today.wishwordrobe.user.application;
 
 import today.wishwordrobe.domain.AddUserRequest;
-import today.wishwordrobe.user.domain.User;
-
-
+import today.wishwordrobe.user.domain.Users;
 import today.wishwordrobe.user.infrastructure.UserRepository;
 
+import at.favre.lib.crypto.bcrypt.BCrypt;
 import lombok.RequiredArgsConstructor;
 
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @RequiredArgsConstructor
 @Service
 public class UserService {
     private final UserRepository userRepository;
-    private final BCryptPasswordEncoder bCryptPasswordEncoder;
 
     public Long save(AddUserRequest dto){
+        // BCrypt로 비밀번호 해싱 (cost factor 12)
+        String hashedPassword = BCrypt.withDefaults().hashToString(12, dto.getPassword().toCharArray());
         return userRepository.save(
-                User.builder()
+                Users.builder()
                 .email(dto.getEmail())
-                .password(bCryptPasswordEncoder.encode(dto.getPassword()))
+                .password(hashedPassword)
                 .phone(dto.getPhone())
                 .build()
         ).getId();
     }
 
-    public User findById(Long userId){
+    public Users findById(Long userId){
         return userRepository.findById(userId)
                 .orElseThrow(()-> new IllegalArgumentException("Unexpected user"));
     }
