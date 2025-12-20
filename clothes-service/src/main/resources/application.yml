@@ -62,9 +62,9 @@ file:
   uploadFiles: D:/uploadFiles
 
 # JWT Configuration
-jwt:
-  issuer: wishful@gmail.com
-  secret_key: iwish
+# jwt:
+#   issuer: wishful@gmail.com
+#   secret_key: iwish
 
 # Logging
 logging:
