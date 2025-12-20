@@ -1,0 +1,45 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: weather-service
+
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/wishweather
+      auto-index-creation: true
+
+    redis:
+      host: localhost
+      port: 6379
+      database: 2
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+
+  codec:
+    max-in-memory-size: 16MB
+
+  webflux:
+    base-path: /api/v1
+
+# Weather API Configuration
+weather:
+  api:
+    key: "dJ+1bX3L4D5nk3DlGR7hHcEexw5lZK9kOiQYE3SUIEmLH7O/Hd/7TBDEWzgPvqQJbYyWJpgLjR67KsK59dX3ow=="
+    url: "http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0"
+    villageFcstUrl: "/getVilageFcst"
+    ultraSrtFcstUrl: "/getUltraSrtFcst"
+    ultraSrtNcstUrl: "/getUltraSrtNcst"
+
+
+
+# Logging
+logging:
+  level:
+    today.wishwordrobe: DEBUG
+    org.springframework.data.mongodb: DEBUG
+    org.springframework.web.reactive: DEBUG

@@ -1,6 +1,6 @@
 package today.wishwordrobe.user.configuration;
 
-import today.wishwordrobe.user.domain.User;
+
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;

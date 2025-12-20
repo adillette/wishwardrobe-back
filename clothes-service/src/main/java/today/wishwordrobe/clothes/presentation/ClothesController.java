@@ -17,8 +17,8 @@ import java.util.List;
 import jakarta.validation.Valid;
 
 @Slf4j
-@Controller
-@RequestMapping(value="/wishwordrobe")
+@RestController
+@RequestMapping("/api/clothes")
 public class ClothesController{//아래 setter 바꿔야한다
 
     @Value("${file.uploadFiles}")
@@ -118,22 +118,23 @@ public class ClothesController{//아래 setter 바꿔야한다
 
 
     //등록 get
-    @GetMapping("/add")
-    public String addClothes(Model model){
-        Clothes clothes = new Clothes();
-        model.addAttribute("clothes",clothes);
-        return "/addClothes";
-    }
+    // @GetMapping("/add")
+    // public String addClothes(Model model){
+    //     Clothes clothes = new Clothes();
+    //     model.addAttribute("clothes",clothes);
+    //     return "/addClothes";
+    // }
 
     //등록 post
     @PostMapping("/add")
-    public String addClothes(@Valid @ModelAttribute("clothes") Clothes clothes,
-                             BindingResult result) {
-        if (result.hasErrors()) {
-            return "clothes/addForm";
-        }
-        clothesService.save(clothes);//저장
-        return "redirect:/wishwordrobe";
+    public String addClothes(@Valid
+                @ModelAttribute("clothes") Clothes clothes,
+                BindingResult result) {
+
+        Clothes savedClothes = clothesService.save(clothes);
+        log.info("새 옷 추가 완료: clothesId={}, userId={}", savedClothes.getClothesId(), savedClothes.getUserId());
+
+        return "옷 등록 완료: " + savedClothes.getName();
     }
 
     /*

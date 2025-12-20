@@ -1,0 +1,34 @@
+{
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Spring Boot-ClothesServiceApplication<clothes-service>",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "mainClass": "today.wishwordrobe.ClothesServiceApplication",
+      "projectName": "clothes-service",
+      "args": "",
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "type": "java",
+      "name": "Spring Boot-NotificationServiceApplication<notification-service>",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "mainClass": "today.wishwordrobe.NotificationServiceApplication",
+      "projectName": "notification-service",
+      "args": "",
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "type": "java",
+      "name": "Spring Boot-WeatherServiceApplication<weather-service>",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "mainClass": "today.wishwordrobe.WeatherServiceApplication",
+      "projectName": "weather-service",
+      "args": "",
+      "envFile": "${workspaceFolder}/.env"
+    }
+  ]
+}

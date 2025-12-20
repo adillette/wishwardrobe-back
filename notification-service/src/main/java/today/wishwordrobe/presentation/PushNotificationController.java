@@ -5,10 +5,12 @@ import today.wishwordrobe.firebase.FCMPushNotificationRequest;
 import today.wishwordrobe.presentation.dto.PushNotificationRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
 import java.util.*;
-
+@Slf4j
 @RestController
 @RequestMapping("/api/notification")
 public class PushNotificationController {
@@ -22,6 +24,7 @@ public class PushNotificationController {
 
     @GetMapping("/public-key")
     public Mono<String> getPublicKey(){
+        log.info("--------------------");
         return Mono.just("단순한 공개키 제공");//이거 initializer에다가 설정했는데 어떻게 불러오지
     }
 
