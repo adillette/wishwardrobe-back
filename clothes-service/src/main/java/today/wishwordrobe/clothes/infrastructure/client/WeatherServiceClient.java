@@ -21,6 +21,6 @@ public interface WeatherServiceClient {
      * @param location 위치 정보 (예: "Seoul", "Busan")
      * @return 날씨 정보
      */
-    @GetMapping("/api/weather/current")
+    @GetMapping("/api/v1/weather")
     WeatherResponse getCurrentWeather(@RequestParam("location") String location);
 }
