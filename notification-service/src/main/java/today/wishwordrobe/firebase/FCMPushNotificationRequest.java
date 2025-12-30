@@ -1,15 +1,11 @@
 package today.wishwordrobe.firebase;
 
-import today.wishwordrobe.presentation.dto.PushNotificationRequest;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.experimental.SuperBuilder;
-
 import java.util.Map;
 
-@Getter
-@Setter
-@SuperBuilder
+import lombok.Data;
+import today.wishwordrobe.presentation.dto.PushNotificationRequest;
+
+@Data
 public class FCMPushNotificationRequest extends PushNotificationRequest {
 
     private String topic;

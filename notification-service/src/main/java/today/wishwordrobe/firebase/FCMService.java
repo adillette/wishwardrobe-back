@@ -24,30 +24,36 @@ public class FCMService {
 
     public Mono<String> sendTopicMessage(FCMPushNotificationRequest  request) {
         return Mono.fromCallable((Callable<? extends String>) () -> {
-            Message message = Message.builder()
+            Message.Builder builder = Message.builder()
                     .setNotification(Notification.builder()
                             .setTitle(request.getTitle())
                             .setBody(request.getMessage())
                             .build())
-                    .putAllData(request.getData())
-                    .setTopic(request.getTopic())
-                    .build();
-
+                    .setTopic(request.getTopic());
+            
+            if (request.getData() != null && !request.getData().isEmpty()) {
+                builder.putAllData(request.getData());
+            }
+            
+            Message message = builder.build();
             return sendAndGetResponse(message);
         });
     }
 
     public Mono<String> sendTokenMessage(FCMPushNotificationRequest  request) {
         return Mono.fromCallable((Callable<? extends String>) () -> {
-            Message message = Message.builder()
+            Message.Builder builder = Message.builder()
                     .setNotification(Notification.builder()
                             .setTitle(request.getTitle())
                             .setBody(request.getMessage())
                             .build())
-                    .putAllData(request.getData())
-                    .setToken(request.getToken())
-                    .build();
-
+                    .setToken(request.getToken());
+            
+            if (request.getData() != null && !request.getData().isEmpty()) {
+                builder.putAllData(request.getData());
+            }
+            
+            Message message = builder.build();
             return sendAndGetResponse(message);
         });
     }

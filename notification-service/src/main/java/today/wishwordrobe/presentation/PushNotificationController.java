@@ -12,7 +12,7 @@ import reactor.core.publisher.Mono;
 import java.util.*;
 @Slf4j
 @RestController
-@RequestMapping("/api/notification")
+@RequestMapping("/notification")
 public class PushNotificationController {
 
     private final PushNotificationService pushNotificationService;
@@ -66,15 +66,25 @@ public class PushNotificationController {
 
     @PostMapping("/send-token")
     public Mono<ResponseEntity<String>> sendTokenNotification(@RequestBody FCMPushNotificationRequest request) {
+        log.info("Received send-token request: token={}, title={}, message={}", 
+                request.getToken(), request.getTitle(), request.getMessage());
+        
         if (request.getToken() == null) {
+            log.error("Token is null in the request");
             return Mono.just(ResponseEntity.badRequest().body("Token is required"));
         }
 
         return pushNotificationService.sendNotification(request)
-                .map(result -> ResponseEntity.ok("Notification sent to device: " + request.getToken()))
-                .onErrorResume(e -> Mono.just(
-                        ResponseEntity.internalServerError().body("Error: " + e.getMessage())
-                ));
+                .map(result -> {
+                    log.info("Notification sent successfully: {}", result);
+                    return ResponseEntity.ok("Notification sent to device: " + request.getToken());
+                })
+                .onErrorResume(e -> {
+                    log.error("Error sending notification", e);
+                    return Mono.just(
+                            ResponseEntity.internalServerError().body("Error: " + e.getMessage())
+                    );
+                });
     }
 
     @PostMapping("/broadcast")
