@@ -1,36 +1,35 @@
 package today.wishwordrobe.clothes.presentation;
 
 import today.wishwordrobe.clothes.application.ClothesService;
-import today.wishwordrobe.clothes.application.FileService;
 import today.wishwordrobe.clothes.domain.Clothes;
 import today.wishwordrobe.clothes.domain.ClothingCategory;
 import today.wishwordrobe.clothes.domain.TempRange;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
-import org.springframework.ui.Model;
-import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
-import jakarta.validation.Valid;
 
 @Slf4j
 @RestController
 @RequestMapping("/api/clothes")
 public class ClothesController{//아래 setter 바꿔야한다
-
-    @Value("${file.uploadFiles}")
-    private  String fileDir;
-
-    private final FileService fileService;
-
-   // private final ClothesRepository clothesRepository;
     private final ClothesService clothesService;
 
-    public ClothesController(FileService fileService, ClothesService clothesService) {
-        this.fileService = fileService;
+    public ClothesController(ClothesService clothesService) {
         this.clothesService = clothesService;
+    }
+
+    /*
+     ★★ 특정 사용자 옷 전체 조회 ★★★
+     옷장(Wardrobe) 목록 표시용
+     */
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<Clothes>> getClothesByUserId(@PathVariable("userId") Long userId) {
+        log.info("옷 전체 조회 요청: userId={}", userId);
+        List<Clothes> clothes = clothesService.getClothesByUserId(userId);
+        return ResponseEntity.ok(clothes);
     }
 
     /*
@@ -40,9 +39,9 @@ public class ClothesController{//아래 setter 바꿔야한다
 
     @GetMapping("/recommendations")
     public ResponseEntity<List<Clothes>> getRecommendedClothes(
-            @RequestParam Long userId,
-            @RequestParam String location,
-            @RequestParam(required = false) ClothingCategory category  ){
+            @RequestParam("userId") Long userId,
+            @RequestParam("location") String location,
+            @RequestParam(value = "category", required = false) ClothingCategory category  ){
         log.info("옷 추천 요청 (MSA): userId={}, location={}, category={}", userId, location, category);
 
         // Weather 서비스에서 날씨 정보를 가져와서 옷 추천 (Feign Client 사용)
@@ -58,9 +57,9 @@ public class ClothesController{//아래 setter 바꿔야한다
      */
     @GetMapping("/recommendations/by-temperature")
     public ResponseEntity<List<Clothes>> getRecommendedClothesByTemperature(
-            @RequestParam Long userId,
-            @RequestParam int temperature,
-            @RequestParam(required = false) ClothingCategory category  ){
+            @RequestParam("userId") Long userId,
+            @RequestParam("temperature") int temperature,
+            @RequestParam(value = "category", required = false) ClothingCategory category  ){
         log.info("옷 추천 요청(온도 직접 입력): userId={}, temp={}, category={}", userId, temperature, category);
 
         TempRange tempRange = TempRange.fromTemperature(temperature);
@@ -71,7 +70,7 @@ public class ClothesController{//아래 setter 바꿔야한다
     /*
     옷장에 save 시킴
      */
-    @PostMapping
+    @PostMapping("/add")
     public ResponseEntity<Clothes> addClothes(@RequestBody Clothes clothes){
         //save 메서드가 자동으로 캐시 무효화 처리해줌
         Clothes savedClothes = clothesService.save(clothes);
@@ -86,7 +85,7 @@ public class ClothesController{//아래 setter 바꿔야한다
      */
     @PutMapping("/{clothesId}")
     public ResponseEntity<Clothes> updateClothes(
-            @PathVariable Long clothesId,
+            @PathVariable("clothesId") Long clothesId,
             @RequestBody Clothes clothes){
         clothes.setClothesId(clothesId);
         Clothes updatedClothes = clothesService.update(clothes);
@@ -98,79 +97,8 @@ public class ClothesController{//아래 setter 바꿔야한다
     해당 id 내용 삭제
      */
     @DeleteMapping("/{clothesId}")
-    public ResponseEntity<Void> delete(@PathVariable Long clothesId){
+    public ResponseEntity<Void> delete(@PathVariable("clothesId") Long clothesId){
         clothesService.deleteById(clothesId);
         return ResponseEntity.ok().build();
     }
-
-
-    /*
-      관리자용 전체 옷장조회 (캐시 없이 그냥 db 조회)
-    */
-    @GetMapping
-    public String getAllClothes(Model model){
-        List<Clothes> clothesList = clothesService.findAll();
-        model.addAttribute("clothesList", clothesList);//뷰(HTML 템플릿)에서는 이 이름(clothesList)으로 데이터에 접근
-        return "clothes/list";
-    }
-
-
-
-    //등록 get
-    // @GetMapping("/add")
-    // public String addClothes(Model model){
-    //     Clothes clothes = new Clothes();
-    //     model.addAttribute("clothes",clothes);
-    //     return "/addClothes";
-    // }
-
-    //등록 post
-    @PostMapping("/add")
-    public String addClothes(@Valid
-                @ModelAttribute("clothes") Clothes clothes,
-                BindingResult result) {
-
-        Clothes savedClothes = clothesService.save(clothes);
-        log.info("새 옷 추가 완료: clothesId={}, userId={}", savedClothes.getClothesId(), savedClothes.getUserId());
-
-        return "옷 등록 완료: " + savedClothes.getName();
-    }
-
-    /*
-    //수정
-    @GetMapping("/{clothesId}/edit")
-    public String showEditForm(@PathVariable Long clothesId, Model model){
-        Clothes clothes = clothesRepository.findById(clothesId)
-                .orElseThrow(() -> new ResourceNotFoundException2("Clothes not found"));
-        model.addAttribute("clothes", clothes);
-        return "수정창";
-        }
-    @PostMapping("/{clothesId}/edit")
-    public String edit(@PathVariable Long clothesId,
-                       @Valid  @ModelAttribute Clothes clothes,
-                       BindingResult result){
-        if (result.hasErrors()) {
-            return "clothes/editForm";
-        }
-        Clothes existClothes = clothesRepository.findById(clothesId)
-                        .orElseThrow(()-> new ResourceNotFoundException2("Clothes not found"))
-        clothesRepository.update(clothesId, clothes);
-        return "redirect:/wishwordrobe/{clothesId}";
-    }
-    // 삭제 처리
-    @PostMapping("/{clothesId}/delete")
-    public String deleteClothes(@PathVariable Long clothesId) {
-        clothesRepository.deleteById(clothesId);
-        return "redirect:/wishwordrobe";
-    }
-    //옷 상세페이지
-    @GetMapping("/{clothesId}")
-    public String 메서드이름(@PathVariable Long clothesId, Model model){
-        Clothes clothes = clothesRepository.findById(clothesId)
-                .orElseThrow(()-> new ResourceNotFoundException2("Clothes is not found"));
-        model.addAttribute("clothes", clothes);
-        return "clothes/detail";
-    }
-
-*/
 }
