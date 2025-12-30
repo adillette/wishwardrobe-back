@@ -12,6 +12,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Mono;
 
 import java.util.*;
+import java.net.URI;
 import java.time.LocalDateTime;
 
 @Slf4j
@@ -24,13 +25,16 @@ public class WeatherClient {
     /**
      * 격자 좌표 조회
      */
-    public Mono<VillageForecastResponse> getVillageForecast(Geographic location){
+    public Mono<VillageForecastResponse> getVillageForecast(Geographic location) {
         Map<String, String> baseDateTime = calculateBaseTime();
         String baseDate = baseDateTime.get("baseDate");
         String baseTime = baseDateTime.get("baseTime");
 
+        boolean apiKeyAlreadyEncoded = config.getApiKey() != null && config.getApiKey().contains("%");
 
-        String uri = UriComponentsBuilder.fromUriString(config.getBaseUrl() + "/getVilageFcst")
+        URI uri = UriComponentsBuilder
+                .fromHttpUrl(config.getBaseUrl())
+                .path(config.getVillageFcstUrl()) // application.yml의 /getVilageFcst 사용
                 .queryParam("serviceKey", config.getApiKey())
                 .queryParam("numOfRows", 1000)
                 .queryParam("pageNo", 1)
@@ -39,38 +43,30 @@ public class WeatherClient {
                 .queryParam("base_time", baseTime)
                 .queryParam("nx", location.getGridX())
                 .queryParam("ny", location.getGridY())
-                .build()
-                .toUriString();
+                .build(apiKeyAlreadyEncoded) // 인코딩 키면 true(그대로), 디코딩 키면 false(한 번 인코딩)
+                .toUri();
 
-        log.info("생성된 api url: {}",uri);
+        log.info("생성된 api url: {}", uri);
 
         return webClient
                 .get()
-                .uri(uri)
+                .uri(uri) // ★ String 말고 URI로 넘기기
                 .retrieve()
-                .bodyToMono(VillageForecastResponse.class)
-                .doOnNext(response ->
-                        log.info("Successfully retrieved forecast data for nx={}, ny={}",
-                                location.getGridX(), location.getGridY()))
-                .onErrorMap(e -> {
-                    log.error("Error fetching forecast for nx={}, ny={}: {}",
-                            location.getGridX(), location.getGridY(), e.getMessage());
-                    return new RuntimeException("Error from Weather API", e);
-                });
+                .bodyToMono(VillageForecastResponse.class);
     }
 
     private Map<String, String> calculateBaseTime() {
         LocalDateTime now = LocalDateTime.now();
         DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyyMMdd");
 
-        int[] baseTimes = {2, 5, 8, 11, 14, 17, 20, 23};
+        int[] baseTimes = { 2, 5, 8, 11, 14, 17, 20, 23 };
         int hour = now.getHour();
         int minute = now.getMinute();
 
-        int baseTimeIndex =-1;
-        for(int i= baseTimes.length -1; i>=0; i--){
-            if(hour > baseTimes[i] ||(hour == baseTimes[i] && minute>=10)){
-                baseTimeIndex=i;
+        int baseTimeIndex = -1;
+        for (int i = baseTimes.length - 1; i >= 0; i--) {
+            if (hour > baseTimes[i] || (hour == baseTimes[i] && minute >= 10)) {
+                baseTimeIndex = i;
                 break;
             }
         }
@@ -89,7 +85,5 @@ public class WeatherClient {
         return result;
 
     }
-
-
 
 }
