@@ -1,4 +1,4 @@
-package today.wishwordrobe.presentation.dto;
+package today.wishwordrobe.weather.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -9,7 +9,6 @@ import lombok.ToString;
 @AllArgsConstructor
 @Data
 @ToString
-public class StateDTO {
-    String state;
-
+public class TownDTO {
+    String town;
 }

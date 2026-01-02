@@ -1,4 +1,4 @@
-package today.wishwordrobe.presentation.dto;
+package today.wishwordrobe.weather.dto;
 
 import lombok.*;
 

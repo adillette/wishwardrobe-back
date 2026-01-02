@@ -1,19 +1,27 @@
 package today.wishwordrobe.weather.application;
 
-import today.wishwordrobe.presentation.dto.VillageForecastResponse;
+import today.wishwordrobe.weather.dto.AirQualityResponse;
+import today.wishwordrobe.weather.dto.UVIndexResponse;
+import today.wishwordrobe.weather.dto.VillageForecastResponse;
+import today.wishwordrobe.weather.configuration.AirKoreaConfig;
 import today.wishwordrobe.weather.configuration.WeatherConfig;
 import today.wishwordrobe.weather.domain.Geographic;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import java.time.format.DateTimeFormatter;
+import java.nio.charset.StandardCharsets;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriComponentsBuilder;
+import org.springframework.web.util.UriUtils;
 import reactor.core.publisher.Mono;
+import reactor.util.retry.Retry;
 
 import java.util.*;
 import java.net.URI;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Duration;
 
 @Slf4j
 @Component
@@ -21,6 +29,8 @@ import java.time.LocalDateTime;
 public class WeatherClient {
     private final WebClient webClient;
     private final WeatherConfig config;
+    private final AirKoreaConfig airKoreaConfig;
+    
 
     /**
      * 격자 좌표 조회
@@ -52,7 +62,21 @@ public class WeatherClient {
                 .get()
                 .uri(uri) // ★ String 말고 URI로 넘기기
                 .retrieve()
-                .bodyToMono(VillageForecastResponse.class);
+                .bodyToMono(VillageForecastResponse.class)
+                .retryWhen(Retry.backoff(3, Duration.ofSeconds(2))
+                    .filter(throwable -> {
+                        // 429 에러는 재시도
+                        if (throwable instanceof org.springframework.web.reactive.function.client.WebClientResponseException) {
+                            org.springframework.web.reactive.function.client.WebClientResponseException ex =
+                                (org.springframework.web.reactive.function.client.WebClientResponseException) throwable;
+                            return ex.getStatusCode().value() == 429;
+                        }
+                        return false;
+                    })
+                    .doBeforeRetry(retrySignal ->
+                        log.warn("기상청 API 재시도 중... 시도 횟수: {}", retrySignal.totalRetries() + 1)
+                    )
+                );
     }
 
     private Map<String, String> calculateBaseTime() {
@@ -84,6 +108,69 @@ public class WeatherClient {
 
         return result;
 
+    }
+
+    //미세먼지
+    public Mono<AirQualityResponse> getAirQuality(String stationName){
+        String apiKey = airKoreaConfig.getApiKey();
+        String encodedApiKey = apiKey == null ? null
+                : (apiKey.contains("%") ? apiKey : UriUtils.encodeQueryParam(apiKey, StandardCharsets.UTF_8));
+        String encodedStationName = stationName == null ? null
+                : UriUtils.encodeQueryParam(stationName, StandardCharsets.UTF_8);
+
+        URI uri = UriComponentsBuilder
+        .fromUriString("https://apis.data.go.kr/B552584/ArpltnInforInqireSvc/getMsrstnKhaiRltmDnsty")
+        .queryParam("serviceKey", encodedApiKey)
+        .queryParam("returnType", "json")
+        .queryParam("stationName", encodedStationName)
+        .queryParam("dateTerm","DAILY")
+        .build(true).toUri();
+
+        log.info("생성된 미세먼지 api url: {}", uri);
+
+        return webClient.get().uri(uri).retrieve()
+        .bodyToMono(AirQualityResponse.class)
+        .retryWhen(Retry.backoff(3, Duration.ofSeconds(2))
+            .filter(throwable -> {
+                if (throwable instanceof org.springframework.web.reactive.function.client.WebClientResponseException) {
+                    org.springframework.web.reactive.function.client.WebClientResponseException ex =
+                        (org.springframework.web.reactive.function.client.WebClientResponseException) throwable;
+                    return ex.getStatusCode().value() == 429;
+                }
+                return false;
+            })
+            .doBeforeRetry(retrySignal ->
+                log.warn("미세먼지 API 재시도 중... 시도 횟수: {}", retrySignal.totalRetries() + 1)
+            )
+        );
+    }
+
+    //자외선 지수
+    public Mono<UVIndexResponse> getUVIndex(String areaNo){
+        String today = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        URI uri = UriComponentsBuilder
+        .fromUriString("http://apis.data.go.kr/1360000/LivingWthrIdxServiceV3/getUVIdxV3")
+        .queryParam("serviceKey", config.getApiKey())
+        .queryParam("areaNo",areaNo)
+        .queryParam("time", today)
+        .queryParam("dataType", "JSON")
+        .build(true).toUri();
+
+        return webClient.get().uri(uri).retrieve()
+        .bodyToMono(UVIndexResponse.class)
+        .retryWhen(Retry.backoff(3, Duration.ofSeconds(2))
+            .filter(throwable -> {
+                if (throwable instanceof org.springframework.web.reactive.function.client.WebClientResponseException) {
+                    org.springframework.web.reactive.function.client.WebClientResponseException ex =
+                        (org.springframework.web.reactive.function.client.WebClientResponseException) throwable;
+                    return ex.getStatusCode().value() == 429;
+                }
+                return false;
+            })
+            .doBeforeRetry(retrySignal ->
+                log.warn("자외선 API 재시도 중... 시도 횟수: {}", retrySignal.totalRetries() + 1)
+            )
+        );
     }
 
 }

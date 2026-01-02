@@ -20,6 +20,8 @@ public class WeatherConfig {
     private String villageFcstUrl;
     private String ultraSrtFcstUrl; // 초단기예보 URL 경로
     private String ultraSrtNcstUrl; // 초단기실황 URL 경로
+    private String uvBaseUrl;       // 자외선 API Base URL
+    private String uvIndexUrl;      // 자외선 지수 URL 경로
 
     @Bean
     public WebClient webClient(){
