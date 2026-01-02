@@ -119,17 +119,44 @@ public class WeatherClient {
                 : UriUtils.encodeQueryParam(stationName, StandardCharsets.UTF_8);
 
         URI uri = UriComponentsBuilder
-        .fromUriString("https://apis.data.go.kr/B552584/ArpltnInforInqireSvc/getMsrstnKhaiRltmDnsty")
+        .fromUriString(airKoreaConfig.getBaseUrl() + airKoreaConfig.getAirQualityUrl())
         .queryParam("serviceKey", encodedApiKey)
         .queryParam("returnType", "json")
         .queryParam("stationName", encodedStationName)
-        .queryParam("dateTerm","DAILY")
+        .queryParam("dataTerm", "DAILY")
+        .queryParam("ver", "1.0")  // ← 이거 추가!
+        .queryParam("pageNo", 1)
+        .queryParam("numOfRows", 1)
         .build(true).toUri();
 
         log.info("생성된 미세먼지 api url: {}", uri);
 
         return webClient.get().uri(uri).retrieve()
         .bodyToMono(AirQualityResponse.class)
+        .doOnSuccess(response -> {
+            // ===== 여기부터 추가 =====
+            log.info("===== 미세먼지 API 응답 =====");
+            if (response != null && response.getResponse() != null) {
+                log.info("resultCode: {}", response.getResponse().getHeader().getResultCode());
+                log.info("resultMsg: {}", response.getResponse().getHeader().getResultMsg());
+                
+                if (response.getResponse().getBody() != null) {
+                    int totalCount = response.getResponse().getBody().getTotalCount();
+                    int itemsSize = response.getResponse().getBody().getItems() != null ? 
+                                    response.getResponse().getBody().getItems().size() : 0;
+                    
+                    log.info("totalCount: {}", totalCount);
+                    log.info("items size: {}", itemsSize);
+                    
+                    if (response.getResponse().getBody().getItems() != null && 
+                        !response.getResponse().getBody().getItems().isEmpty()) {
+                        log.info("첫 번째 item: {}", response.getResponse().getBody().getItems().get(0));
+                    }
+                }
+            }
+            log.info("=============================");
+            // ===== 여기까지 추가 =====
+        })
         .retryWhen(Retry.backoff(3, Duration.ofSeconds(2))
             .filter(throwable -> {
                 if (throwable instanceof org.springframework.web.reactive.function.client.WebClientResponseException) {
@@ -149,7 +176,7 @@ public class WeatherClient {
     public Mono<UVIndexResponse> getUVIndex(String areaNo){
         String today = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         URI uri = UriComponentsBuilder
-        .fromUriString("http://apis.data.go.kr/1360000/LivingWthrIdxServiceV3/getUVIdxV3")
+        .fromUriString("http://apis.data.go.kr/1360000/LivingWthrIdxServiceV4/getUVIdxV4")
         .queryParam("serviceKey", config.getApiKey())
         .queryParam("areaNo",areaNo)
         .queryParam("time", today)

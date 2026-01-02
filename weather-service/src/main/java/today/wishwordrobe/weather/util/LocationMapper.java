@@ -21,17 +21,16 @@ public class LocationMapper {
         // 서울 주요 지역 측정소 매핑 (간단한 범위 기반)
         // 실제로는 더 정교한 거리 계산 또는 외부 API 사용 가능
 
-        // 서울 중구 (종로구 측정소)
-        if (latitude >= 37.56 && latitude <= 37.58 && longitude >= 126.97 && longitude <= 127.01) {
-            log.info("위경도 ({}, {}) -> 측정소: 종로구", longitude, latitude);
-            return "종로구";
-        }
+       if (latitude >= 37.56 && latitude <= 37.58 && longitude >= 126.97 && longitude <= 127.01) {
+        log.info("위경도 ({}, {}) -> 측정소: 중구", longitude, latitude);
+        return "중구";  // ← 종로구에서 중구로 변경
+    }
 
-        // 서울 강남 (강남구 측정소)
-        if (latitude >= 37.49 && latitude <= 37.52 && longitude >= 127.02 && longitude <= 127.06) {
-            log.info("위경도 ({}, {}) -> 측정소: 강남구", longitude, latitude);
-            return "강남구";
-        }
+    // 서울 강남 (강남구 측정소)
+    if (latitude >= 37.49 && latitude <= 37.52 && longitude >= 127.02 && longitude <= 127.06) {
+        log.info("위경도 ({}, {}) -> 측정소: 강남구", longitude, latitude);
+        return "강남구";
+    }
 
         // 서울 송파 (송파구 측정소)
         if (latitude >= 37.50 && latitude <= 37.53 && longitude >= 127.06 && longitude <= 127.12) {
@@ -51,9 +50,9 @@ public class LocationMapper {
             return "마포구";
         }
 
-        // 기본값: 서울 (종로구)
-        log.warn("위경도 ({}, {})에 해당하는 측정소를 찾지 못함. 기본값(종로구) 사용", longitude, latitude);
-        return "종로구";
+        // 기본값: 중구
+    log.warn("위경도 ({}, {})에 해당하는 측정소를 찾지 못함. 기본값(중구) 사용", longitude, latitude);
+    return "중구";  // ← 종로구에서 중구로 변경
     }
 
     /**
