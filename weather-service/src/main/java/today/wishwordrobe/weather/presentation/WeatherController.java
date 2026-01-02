@@ -1,6 +1,7 @@
 package today.wishwordrobe.weather.presentation;
 
-import today.wishwordrobe.presentation.dto.WeatherForecastDTO;
+import today.wishwordrobe.weather.dto.IntegratedWeatherDto;
+import today.wishwordrobe.weather.dto.WeatherForecastDTO;
 import today.wishwordrobe.weather.application.WeatherService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -53,7 +54,51 @@ public class WeatherController {
                 });
     }
 
+    /**
+     * 날씨 + 미세먼지 + 자외선을 병렬로 조회 (Mono.zip 사용)
+     *
+     * @param location 지역명 (예: 서울)
+     * @param station 측정소명 (예: 종로구)
+     * @param areaNo 지역번호 (예: 1100000000)
+     * @return 통합 날씨 정보
+     */
+    @GetMapping("/integrated")
+    public Mono<ResponseEntity<IntegratedWeatherDto>> getIntegratedWeather(
+            @RequestParam("location") String location,
+            @RequestParam("station") String station,
+            @RequestParam("areaNo") String areaNo) {
+        log.info("통합 날씨 정보 병렬 조회 요청: location={}, station={}, areaNo={}", location, station, areaNo);
+
+        return weatherService.getIntegratedWeatherParallel(location, station, areaNo)
+                .map(ResponseEntity::ok)
+                .doOnSuccess(response -> log.info("통합 날씨 정보 병렬 조회 성공: {}", location))
+                .onErrorResume(e -> {
+                    log.error("통합 날씨 정보 조회 오류: {}", e.getMessage(), e);
+                    return Mono.just(ResponseEntity.badRequest().build());
+                });
+    }
+
+    /**
+     * 위경도로 통합 날씨 정보 조회 (날씨 + 미세먼지 + 자외선)
+     *
+     * @param latitude 위도
+     * @param longitude 경도
+     * @return 통합 날씨 정보 (날씨, 미세먼지, 자외선 포함)
+     */
+    @GetMapping("/integrated/coordinates")
+    public Mono<ResponseEntity<IntegratedWeatherDto>> getIntegratedWeatherByCoordinates(
+            @RequestParam("lat") double latitude,
+            @RequestParam("lon") double longitude) {
+        log.info("위경도로 통합 날씨 조회 요청: lat={}, lon={}", latitude, longitude);
+
+        return weatherService.getIntegratedWeatherByCoordinates(longitude, latitude)
+                .map(ResponseEntity::ok)
+                .doOnSuccess(response -> log.info("위경도 기반 통합 날씨 정보 조회 성공: ({}, {})", latitude, longitude))
+                .onErrorResume(e -> {
+                    log.error("위경도 기반 통합 날씨 정보 조회 오류: {}", e.getMessage(), e);
+                    return Mono.just(ResponseEntity.badRequest().build());
+                });
+    }
+
 }
-
-
 
