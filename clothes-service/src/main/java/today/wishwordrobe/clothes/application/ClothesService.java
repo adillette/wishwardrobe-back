@@ -40,6 +40,17 @@ public class ClothesService {
      * @param category 옷 카테고리 (선택)
      * @return 추천 옷 리스트
      */
+    /**
+     * 특정 userId의 옷 전체 조회 (옷장 목록용)
+     */
+    public List<Clothes> getClothesByUserId(Long userId) {
+        return clothesRepository.findByUserId(userId);
+    }
+
+    /**
+     * 위치 기반으로 날씨 정보를 가져와서 옷 추천 (MSA 동기 통신)
+    
+     */
     public List<Clothes> getClothesRecommendationByLocation(Long userId, String location, ClothingCategory category) {
         // Weather 서비스에서 날씨 정보 가져오기 (Feign Client - 동기 통신)
         WeatherResponse weather = weatherServiceClient.getCurrentWeather(location);
@@ -110,25 +121,21 @@ public class ClothesService {
     2. 저장 write- behind 적용, 저장시 캐시 무효화
      */
 
-    @CacheEvict(
-            value = "clothesCache",
-            key="#clothes.userId + ':*'", //해당 사용자의 모든 캐시를 삭제한다.
-            allEntries = false
-    )
+  
     public Clothes save(Clothes clothes){
         Clothes savedClothes = clothesRepository.save(clothes);
 
         // RabbitMQ로 이벤트 발행 (비동기 통신)
-        ClothesEvent event = ClothesEvent.builder()
-                .eventType(ClothesEvent.EventType.CREATED)
-                .clothesId(savedClothes.getClothesId())
-                .userId(savedClothes.getUserId())
-                .category(savedClothes.getCategory())
-                .eventTime(LocalDateTime.now())
-                .description("새 옷이 추가되었습니다")
-                .build();
+        // ClothesEvent event = ClothesEvent.builder()
+        //         .eventType(ClothesEvent.EventType.CREATED)
+        //         .clothesId(savedClothes.getClothesId())
+        //         .userId(savedClothes.getUserId())
+        //         .category(savedClothes.getCategory())
+        //         .eventTime(LocalDateTime.now())
+        //         .description("새 옷이 추가되었습니다")
+        //         .build();
 
-        clothesEventProducer.publishEvent(event);
+        // clothesEventProducer.publishEvent(event);
 
         return savedClothes;
     }
@@ -145,27 +152,23 @@ public class ClothesService {
     /*
     3. 옷 수정
      */
-    @CacheEvict(
-            value = "clothesCache",
-            key = "#clothes.userId + ':*'",
-            allEntries = false
-    )
+  
 
    // clothes dto 만들기 전임
     public Clothes update(Clothes clothes){
         Clothes updatedClothes = clothesRepository.save(clothes);
 
-        // RabbitMQ로 이벤트 발행 (비동기 통신)
-        ClothesEvent event = ClothesEvent.builder()
-                .eventType(ClothesEvent.EventType.UPDATED)
-                .clothesId(updatedClothes.getClothesId())
-                .userId(updatedClothes.getUserId())
-                .category(updatedClothes.getCategory())
-                .eventTime(LocalDateTime.now())
-                .description("옷 정보가 수정되었습니다")
-                .build();
+        // // RabbitMQ로 이벤트 발행 (비동기 통신)
+        // ClothesEvent event = ClothesEvent.builder()
+        //         .eventType(ClothesEvent.EventType.UPDATED)
+        //         .clothesId(updatedClothes.getClothesId())
+        //         .userId(updatedClothes.getUserId())
+        //         .category(updatedClothes.getCategory())
+        //         .eventTime(LocalDateTime.now())
+        //         .description("옷 정보가 수정되었습니다")
+        //         .build();
 
-        clothesEventProducer.publishEvent(event);
+        // clothesEventProducer.publishEvent(event);
 
         return updatedClothes;
     }
@@ -177,10 +180,7 @@ public class ClothesService {
     /*
     4. 옷삭제
      */
-    @CacheEvict(
-            value="clothesCache",
-            allEntries = true //삭제할때 모든 캐시 삭제
-    )
+   
     public void deleteById(Long clothesId){
         // 삭제 전에 옷 정보를 조회 (이벤트에 필요한 정보 확보)
         Clothes clothes = clothesRepository.findById(clothesId)
@@ -188,17 +188,17 @@ public class ClothesService {
 
         clothesRepository.deleteById(clothesId);
 
-        // RabbitMQ로 이벤트 발행 (비동기 통신)
-        ClothesEvent event = ClothesEvent.builder()
-                .eventType(ClothesEvent.EventType.DELETED)
-                .clothesId(clothesId)
-                .userId(clothes.getUserId())
-                .category(clothes.getCategory())
-                .eventTime(LocalDateTime.now())
-                .description("옷이 삭제되었습니다")
-                .build();
+        // // RabbitMQ로 이벤트 발행 (비동기 통신)
+        // ClothesEvent event = ClothesEvent.builder()
+        //         .eventType(ClothesEvent.EventType.DELETED)
+        //         .clothesId(clothesId)
+        //         .userId(clothes.getUserId())
+        //         .category(clothes.getCategory())
+        //         .eventTime(LocalDateTime.now())
+        //         .description("옷이 삭제되었습니다")
+        //         .build();
 
-        clothesEventProducer.publishEvent(event);
+        // clothesEventProducer.publishEvent(event);
     }
 
     /*
