@@ -48,6 +48,8 @@ dependencies {
     // Test
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'io.projectreactor:reactor-test'
+    // https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-thymeleaf
+implementation 'org.springframework.boot:spring-boot-starter-thymeleaf:3.5.4'
 }
 
 tasks.named('test') {
