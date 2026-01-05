@@ -15,8 +15,6 @@ import today.wishwordrobe.clothes.domain.TempRange;
 import today.wishwordrobe.clothes.infrastructure.ClothesRepository;
 import today.wishwordrobe.clothes.infrastructure.client.WeatherServiceClient;
 import today.wishwordrobe.clothes.infrastructure.dto.WeatherResponse;
-import today.wishwordrobe.clothes.infrastructure.messaging.ClothesEvent;
-import today.wishwordrobe.clothes.infrastructure.messaging.ClothesEventProducer;
 
 @RequiredArgsConstructor
 @Service
@@ -28,7 +26,7 @@ public class ClothesService {
      */
     private final ClothesRepository clothesRepository;
     private final WeatherServiceClient weatherServiceClient;
-    private final ClothesEventProducer clothesEventProducer;
+   
 
 
 
