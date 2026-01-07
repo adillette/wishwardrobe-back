@@ -1,0 +1,138 @@
+version: '3.8'
+
+services:
+  # Redis - 캐싱 및 세션 관리
+  redis:
+    image: redis:7-alpine
+    container_name: wishwordrobe-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - wishwordrobe-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # MongoDB - 날씨 및 알림 데이터 저장
+  mongodb:
+    image: mongo:7
+    container_name: wishwordrobe-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin123
+    volumes:
+      - mongodb-data:/data/db
+    networks:
+      - wishwordrobe-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # Clothes Service - 의류 관리 서비스 (WebMVC)
+  clothes-service:
+    build:
+      context: ./clothes-service
+      dockerfile: Dockerfile
+    container_name: clothes-service
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+      - SPRING_DATASOURCE_URL=jdbc:h2:mem:clothesdb
+      - FILE_UPLOAD_DIR=/app/uploads
+    volumes:
+      - clothes-uploads:/app/uploads
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - wishwordrobe-network
+    restart: unless-stopped
+
+  # Weather Service - 날씨 정보 서비스 (WebFlux)
+  weather-service:
+    build:
+      context: ./weather-service
+      dockerfile: Dockerfile
+    container_name: weather-service
+    ports:
+      - "8082:8082"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATA_MONGODB_URI=mongodb://admin:admin123@mongodb:27017/wishweather?authSource=admin
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+      - SPRING_DATA_REDIS_DATABASE=2
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - wishwordrobe-network
+    restart: unless-stopped
+
+  # Notification Service - 알림 서비스 (WebFlux)
+  notification-service:
+    build:
+      context: ./notification-service
+      dockerfile: Dockerfile
+    container_name: notification-service
+    ports:
+      - "8083:8083"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATA_MONGODB_URI=mongodb://admin:admin123@mongodb:27017/wishnotification?authSource=admin
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+      - SPRING_DATA_REDIS_DATABASE=3
+    volumes:
+      - ./notification-service/src/main/resources/service-account-key.json:/app/service-account-key.json:ro
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - wishwordrobe-network
+    restart: unless-stopped
+
+  # Frontend - Vue.js Application
+  wishwardrobe-front:
+    build:
+      context: ../wishwardrobe-front
+      dockerfile: Dockerfile
+    container_name: wishwardrobe-front
+    ports:
+      - "8080:8080"
+    environment:
+      - VUE_APP_CLOTHES_API_URL=http://clothes-service:8081
+      - VUE_APP_WEATHER_API_URL=http://weather-service:8082
+      - VUE_APP_NOTIFICATION_API_URL=http://notification-service:8083
+    depends_on:
+      - clothes-service
+      - weather-service
+      - notification-service
+    networks:
+      - wishwordrobe-network
+    restart: unless-stopped
+
+networks:
+  wishwordrobe-network:
+    driver: bridge
+
+volumes:
+  redis-data:
+  mongodb-data:
+  clothes-uploads:
