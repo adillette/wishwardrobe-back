@@ -1,0 +1,55 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8" /><title>WebPush Test</title></head>
+<body>
+  <button id="btn">Subscribe WebPush</button>
+  <pre id="out"></pre>
+
+<script>
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  return Uint8Array.from([...rawData].map(ch => ch.charCodeAt(0)));
+}
+
+document.getElementById('btn').onclick = async () => {
+  const out = document.getElementById('out');
+
+  try {
+    // Register service worker and wait for it to be ready
+    await navigator.serviceWorker.register('/api/service-worker.js');
+    const reg = await navigator.serviceWorker.ready;
+    
+    // Check if subscription already exists
+    let sub = await reg.pushManager.getSubscription();
+
+    if (!sub) {
+      // Create new subscription only if none exists
+      const publicKey = await (await fetch('http://localhost:8083/api/notification/public-key')).text();
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey.trim()),
+      });
+
+      // Save to server
+      await fetch('http://localhost:8083/api/notification/subscribe', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(sub),
+      });
+      
+      out.textContent = 'New subscription created:\n' + JSON.stringify(sub, null, 2);
+      alert('New subscription created and saved to server');
+    } else {
+      out.textContent = 'Existing subscription found:\n' + JSON.stringify(sub, null, 2);
+      alert('Already subscribed');
+    }
+  } catch (error) {
+    out.textContent = 'Error: ' + error.message;
+    alert('Subscription failed: ' + error.message);
+  }
+};
+</script>
+</body>
+</html>
