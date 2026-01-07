@@ -1,21 +1,32 @@
 package today.wishwordrobe.presentation;
 
-import today.wishwordrobe.application.PushNotificationService;
-import today.wishwordrobe.firebase.FCMPushNotificationRequest;
-import today.wishwordrobe.presentation.dto.PushNotificationRequest;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
-
-import java.util.*;
+import today.wishwordrobe.application.PushNotificationService;
+import today.wishwordrobe.firebase.FCMPushNotificationRequest;
+import today.wishwordrobe.presentation.dto.PushNotificationRequest;
 @Slf4j
 @RestController
 @RequestMapping("/notification")
 public class PushNotificationController {
 
-    private final PushNotificationService pushNotificationService;
+    @Autowired
+    private  PushNotificationService pushNotificationService;
+    
+    @Value("${webpush.public-key}")
+    private String publicKey;
+
 
 
     public PushNotificationController(PushNotificationService pushNotificationService) {
@@ -25,7 +36,7 @@ public class PushNotificationController {
     @GetMapping("/public-key")
     public Mono<String> getPublicKey(){
         log.info("--------------------");
-        return Mono.just("단순한 공개키 제공");//이거 initializer에다가 설정했는데 어떻게 불러오지
+        return Mono.just(publicKey);
     }
 
     //구독 정보 저장

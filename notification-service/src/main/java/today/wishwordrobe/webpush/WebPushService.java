@@ -1,56 +1,77 @@
 package today.wishwordrobe.webpush;
 
+import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
-
-import nl.martijndwars.webpush.Notification;
-import nl.martijndwars.webpush.PushService;
-import org.jose4j.lang.JoseException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import lombok.extern.slf4j.Slf4j;
+import nl.martijndwars.webpush.Notification;
+import nl.martijndwars.webpush.PushService;
 import reactor.core.publisher.Mono;
-
-import java.util.concurrent.ExecutionException;
-import java.io.IOException;
-import java.security.GeneralSecurityException;
-
+import reactor.core.scheduler.Schedulers;
 
 @Service
+@Slf4j
 public class WebPushService {
 
-    private final PushService pushService;
-
-    public WebPushService(PushService pushService) {
-        this.pushService = pushService;
-    }
+    @Autowired
+    private PushService pushService;
+    
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     public Mono<Void> sendNotification(WebPushNotificationRequest request) {
-        return Mono.fromRunnable(() -> {
-            try {
-                WebPushSubscription subscription = request.getSubscription();
-                String payload = createPayload(request);
+        return Mono.fromCallable(() -> {
+            WebPushSubscription subscription = request.getSubscription();
+            String payload = createPayload(request);
 
-                Notification notification = new Notification(
-                        subscription.getEndpoint(),
-                        subscription.getKeys().getP256dh(),
-                        subscription.getKeys().getAuth(),
-                        payload.getBytes()
-                );
+            Notification notification = new Notification(
+                subscription.getEndpoint(),
+                subscription.getKeys().getP256dh(),
+                subscription.getKeys().getAuth(),
+                payload.getBytes(StandardCharsets.UTF_8)
+            );
 
-                pushService.send(notification);
-            } catch (GeneralSecurityException | IOException | JoseException | ExecutionException | InterruptedException e) {
-                throw new RuntimeException("Error sending web push notification", e);
+            var response = pushService.send(notification);
+            int status = response.getStatusLine().getStatusCode();
+            String body = null;
+            
+            if (response.getEntity() != null) {
+                body = org.apache.http.util.EntityUtils.toString(response.getEntity(), StandardCharsets.UTF_8);
             }
-        });
+            
+            if (status < 200 || status >= 300) {
+                log.error("Web push failed: status={}, endpoint={}, body={}", status, subscription.getEndpoint(), body);
+                throw new WebPushSendException(subscription.getEndpoint(), status, body);
+            }
+            
+            log.info("WebPush sent successfully: endpoint={}, status={}", subscription.getEndpoint(), status);
+            
+            return null;
+        })
+        .subscribeOn(Schedulers.boundedElastic())
+        .then()
+        .doOnError(e -> log.error("Error sending web push notification", e));
     }
 
     private String createPayload(WebPushNotificationRequest request) {
-        // JSON으로 변환하는 로직 구현
-        return String.format(
-                "{\"title\":\"%s\",\"message\":\"%s\",\"icon\":\"%s\",\"clickAction\":\"%s\"}",
-                request.getTitle(),
-                request.getMessage(),
-                request.getIcon(),
-                request.getClickAction()
-        );
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("title", request.getTitle());
+        payload.put("message", request.getMessage());
+        payload.put("icon", request.getIcon());
+        payload.put("clickAction", request.getClickAction());
+        payload.put("data", request.getData());
+        payload.put("url", request.getUrl());
+
+        try {
+            return OBJECT_MAPPER.writeValueAsString(payload);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Error creating web push payload JSON", e);
+        }
     }
 }

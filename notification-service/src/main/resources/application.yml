@@ -7,7 +7,8 @@ spring:
 
   data:
     mongodb:
-      uri: mongodb://localhost:27017/wishnotification
+      uri: mongodb://wish:wish123@localhost:27017/wishnotification?authSource=wishnotification
+
       auto-index-creation: true
 
     redis:
@@ -36,6 +37,21 @@ webpush:
   private-key: huVJXf_XYE4xag1unkHTXTQK7-Clx0UAO0N77myaASA
   subject: mailto:wishful@gmail.com
 
+# Weather Service 연동 (추가)
+weather-service:
+  base-url: http://localhost:8082/api/v1
+
+notification:
+  daily:
+    enabled: true
+    cron: "0 0 9 * * *"
+    lat: 37.5665
+    lon: 126.9780
+    location-label: "서울(시청)"
+    zone: Asia/Seoul
+    mobile-topic: daily-weather
+    
+    click-action: "http://localhost:8083"  
 # Logging
 logging:
   level:

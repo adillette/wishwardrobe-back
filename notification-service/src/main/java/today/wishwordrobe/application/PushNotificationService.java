@@ -1,50 +1,65 @@
 package today.wishwordrobe.application;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
-import today.wishwordrobe.webpush.WebPushNotificationRequest;
-import today.wishwordrobe.webpush.WebPushService;
-import today.wishwordrobe.webpush.WebPushSubscription;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Mono;
 import today.wishwordrobe.firebase.FCMPushNotificationRequest;
 import today.wishwordrobe.firebase.FCMService;
+import today.wishwordrobe.infrastructure.WebPushSubscriptionRepository;
 import today.wishwordrobe.presentation.dto.PushNotificationRequest;
-import org.checkerframework.checker.units.qual.Current;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
-import reactor.core.publisher.Mono;
-
-
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import today.wishwordrobe.presentation.dto.WebPushSubscriptionDocument;
+import today.wishwordrobe.webpush.WebPushNotificationRequest;
+import today.wishwordrobe.webpush.WebPushService;
+import today.wishwordrobe.webpush.WebPushSendException;
+import today.wishwordrobe.webpush.WebPushSubscription;
 
 @Service
+@Slf4j
 public class PushNotificationService {
 
-    private final FCMService fcmService;
-    private final WebPushService webPushService;
+    @Autowired
+    private WebPushSubscriptionRepository webPushSubscriptionRepository;
 
+    @Autowired
+    private FCMService fcmService;
+    @Autowired
+    private WebPushService webPushService;
 
-    //브라우저 구독 정보를 저장하는 hash맵
-    private final Map<String, WebPushSubscription> subscriptions=
-            new ConcurrentHashMap<>();
-
-    public PushNotificationService(FCMService fcmService, WebPushService webPushService) {
+    public PushNotificationService(FCMService fcmService, WebPushService webPushService,
+            WebPushSubscriptionRepository webPushSubscriptionRepository) {
         this.fcmService = fcmService;
         this.webPushService = webPushService;
+        this.webPushSubscriptionRepository = webPushSubscriptionRepository;
     }
 
-    public Mono<Void> saveSubscription(Map<String, Object> rawSubscription){
-        return Mono.fromRunnable(()->{
-            WebPushSubscription subscription = convertSubScription(rawSubscription);
-            subscriptions.put(subscription.getEndpoint(),subscription);
-        });
+    public Mono<Void> saveSubscription(Map<String, Object> rawSubscription) {
+        WebPushSubscription subscription = convertSubScription(rawSubscription);
+
+        WebPushSubscriptionDocument doc = new WebPushSubscriptionDocument();
+        doc.setEndpoint(subscription.getEndpoint());
+        doc.setP256dh(subscription.getKeys().getP256dh());
+        doc.setAuth(subscription.getKeys().getAuth());
+
+        return webPushSubscriptionRepository.save(doc).then();
     }
 
-    public Mono<Map<String,Object>> sendNotification(PushNotificationRequest request){
-        //결과를 저장할 맵
-        Map<String, Object> results= new HashMap<>();
-        List<Mono<?>> tasks= new ArrayList<>();
+    public Mono<Map<String, Object>> sendNotification(PushNotificationRequest request) {
+        // 브로드캐스트 요청: WebPushNotificationRequest/FCMPushNotificationRequest가 아니면
+        // MongoDB에 저장된 구독자 전체에게 발송한다.
+        if (!(request instanceof WebPushNotificationRequest) && !(request instanceof FCMPushNotificationRequest)) {
+            return broadcastWebPushFromDb(request);
+        }
+
+        // 결과를 저장할 맵
+        Map<String, Object> results = new HashMap<>();
+        List<Mono<?>> tasks = new ArrayList<>();
 
         // FCM 요청 처리 (FCMPushNotificationRequest 타입 확인)
         if (request instanceof FCMPushNotificationRequest) {
@@ -90,38 +105,59 @@ public class PushNotificationService {
             }
         }
 
-        // 브로드캐스트 처리
-        // (여기서는 기존 구독자 목록을 활용)
-        if (!(request instanceof WebPushNotificationRequest) && !(request instanceof FCMPushNotificationRequest)) {
-            results.put("broadcastCount", subscriptions.size());
-
-            for (WebPushSubscription subscription : subscriptions.values()) {
-                // 새로운 웹푸시 요청 객체 생성
-                WebPushNotificationRequest webRequest = WebPushNotificationRequest.builder()
-                        .title(request.getTitle())
-                        .message(request.getMessage())
-                        .icon(request.getIcon())
-                        .clickAction(request.getClickAction())
-                        .data(request.getData())
-                        .url(request.getUrl())
-                        .subscription(subscription)
-                        .build();
-
-                tasks.add(webPushService.sendNotification(webRequest)
-                        .onErrorResume(e -> Mono.empty()));
-            }
-        }
-
         // 모든 작업 실행 후 결과 반환
         return Mono.when(tasks).thenReturn(results);
+    }
+
+    private Mono<Map<String, Object>> broadcastWebPushFromDb(PushNotificationRequest request) {
+        return webPushSubscriptionRepository.count()
+                .flatMap(count -> {
+                    Map<String, Object> results = new HashMap<>();
+                    results.put("broadcastCount", count);
+
+                    return webPushSubscriptionRepository.findAll()
+                            .flatMap(doc -> {
+                                WebPushSubscription subscription = new WebPushSubscription();
+                                subscription.setEndpoint(doc.getEndpoint());
+
+                                WebPushSubscription.Keys keys = new WebPushSubscription.Keys();
+                                keys.setP256dh(doc.getP256dh());
+                                keys.setAuth(doc.getAuth());
+                                subscription.setKeys(keys);
+
+                                WebPushNotificationRequest webRequest = WebPushNotificationRequest.builder()
+                                        .title(request.getTitle())
+                                        .message(request.getMessage())
+                                        .icon(request.getIcon())
+                                        .clickAction(request.getClickAction())
+                                        .data(request.getData())
+                                        .url(request.getUrl())
+                                        .subscription(subscription)
+                                        .build();
+
+                                return webPushService.sendNotification(webRequest)
+                                        .doOnError(e -> log.error("WebPush send failed: endpoint={}", doc.getEndpoint(),
+                                                e))
+                                        .onErrorResume(e -> {
+                                            if (e instanceof WebPushSendException ex && ex.getStatusCode() == 410) {
+                                                log.warn("WebPush subscription expired (410 Gone). Re-subscribe required. endpoint={}", doc.getEndpoint());
+                                                // 만료된 구독은 DB에서 제거 (다음 broadcast에서 재시도 안 함)
+                                                return webPushSubscriptionRepository.deleteById(doc.getEndpoint())
+                                                        .then(Mono.empty());
+                                            }
+                                            return Mono.empty();
+                                        });
+                            })
+                            .then(Mono.just(results));
+                });
     }
 
     private WebPushSubscription convertSubScription(Map<String, Object> rawSubscription) {
         WebPushSubscription subscription = new WebPushSubscription();
         subscription.setEndpoint((String) rawSubscription.get("endpoint"));
 
-        Map<String, String> keysMap = (Map<String,String>)rawSubscription.get("keys");
-        WebPushSubscription.Keys keys= new WebPushSubscription.Keys();
+        Map<String, String> keysMap = (Map<String, String>) rawSubscription.get("keys");
+        WebPushSubscription.Keys keys = new WebPushSubscription.Keys();
         keys.setP256dh(keysMap.get("p256dh"));
         keys.setAuth(keysMap.get("auth"));
 
