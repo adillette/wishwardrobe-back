@@ -20,9 +20,7 @@ public class WeatherController {
 
     private final WeatherService weatherService;
 
-    /**
-     * 지역명으로 날씨 조회
-     */
+   //지역명으로 날씨 조회
     @GetMapping
     public Mono<ResponseEntity<WeatherForecastDTO>> getWeatherByLocation(@RequestParam("location") String location){
         log.info("로케이션 나와랏: {}" + location);
@@ -35,10 +33,7 @@ public class WeatherController {
                     return Mono.just(ResponseEntity.badRequest().build());
                 });
     }
-
-    /**
-     * 위경도로 날씨 조회
-     */
+    //위경도로 날씨 조회
     @GetMapping("/coordinates")
     public Mono<ResponseEntity<WeatherForecastDTO>> getWeatherByCoordinates(
             @RequestParam("lat") double latitude,
@@ -54,14 +49,7 @@ public class WeatherController {
                 });
     }
 
-    /**
-     * 날씨 + 미세먼지 + 자외선을 병렬로 조회 (Mono.zip 사용)
-     *
-     * @param location 지역명 (예: 서울)
-     * @param station 측정소명 (예: 종로구)
-     * @param areaNo 지역번호 (예: 1100000000)
-     * @return 통합 날씨 정보
-     */
+    //날씨 + 미세먼지 + 자외선을 병렬로 조회 (Mono.zip 사용)
     @GetMapping("/integrated")
     public Mono<ResponseEntity<IntegratedWeatherDto>> getIntegratedWeather(
             @RequestParam("location") String location,
@@ -78,13 +66,8 @@ public class WeatherController {
                 });
     }
 
-    /**
-     * 위경도로 통합 날씨 정보 조회 (날씨 + 미세먼지 + 자외선)
-     *
-     * @param latitude 위도
-     * @param longitude 경도
-     * @return 통합 날씨 정보 (날씨, 미세먼지, 자외선 포함)
-     */
+     //위경도로 통합 날씨 정보 조회 (날씨 + 미세먼지 + 자외선)
+  
     @GetMapping("/integrated/coordinates")
     public Mono<ResponseEntity<IntegratedWeatherDto>> getIntegratedWeatherByCoordinates(
             @RequestParam("lat") double latitude,

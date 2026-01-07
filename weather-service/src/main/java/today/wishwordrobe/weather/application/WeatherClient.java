@@ -4,12 +4,15 @@ import today.wishwordrobe.weather.dto.AirQualityResponse;
 import today.wishwordrobe.weather.dto.UVIndexResponse;
 import today.wishwordrobe.weather.dto.VillageForecastResponse;
 import today.wishwordrobe.weather.configuration.AirKoreaConfig;
+import today.wishwordrobe.weather.configuration.RedisWeatherCache;
 import today.wishwordrobe.weather.configuration.WeatherConfig;
 import today.wishwordrobe.weather.domain.Geographic;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import java.time.format.DateTimeFormatter;
 import java.nio.charset.StandardCharsets;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -25,16 +28,17 @@ import java.time.Duration;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class WeatherClient {
-    private final WebClient webClient;
-    private final WeatherConfig config;
-    private final AirKoreaConfig airKoreaConfig;
-    
+    @Autowired
+    private  WebClient webClient;
+    @Autowired
+    private  WeatherConfig config;
+    @Autowired
+    private  AirKoreaConfig airKoreaConfig;
+    @Autowired
+    private RedisWeatherCache redisWeatherCache;
 
-    /**
-     * 격자 좌표 조회
-     */
+   //격자 좌표 조회
     public Mono<VillageForecastResponse> getVillageForecast(Geographic location) {
         Map<String, String> baseDateTime = calculateBaseTime();
         String baseDate = baseDateTime.get("baseDate");
@@ -154,8 +158,7 @@ public class WeatherClient {
                     }
                 }
             }
-            log.info("=============================");
-            // ===== 여기까지 추가 =====
+            
         })
         .retryWhen(Retry.backoff(3, Duration.ofSeconds(2))
             .filter(throwable -> {
