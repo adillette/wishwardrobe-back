@@ -9,18 +9,15 @@ import today.wishwordrobe.clothes.infrastructure.dto.WeatherResponse;
  * Weather Service와 통신하는 Feign Client
  * MSA 환경에서 동기 방식으로 날씨 정보를 가져옴
  */
-@FeignClient(
-        name = "weather-service",
-        url = "${services.weather.url}",
-        fallback = WeatherServiceClientFallback.class
-)
+@FeignClient(name = "weather-service", url = "${services.weather.url}", fallback = WeatherServiceClientFallback.class)
 public interface WeatherServiceClient {
 
-    /**
-     * 위치 기반으로 현재 날씨 정보 조회
-     * @param location 위치 정보 (예: "Seoul", "Busan")
-     * @return 날씨 정보
-     */
+    // 위경도 기반 날씨 조회
+    @GetMapping("/api/v1/weather/coordinates")
+    WeatherResponse getWeatherByCoordinates(@RequestParam("lat") double lat,
+            @RequestParam("lon") double lon);
+
     @GetMapping("/api/v1/weather")
-    WeatherResponse getCurrentWeather(@RequestParam("location") String location);
+    WeatherResponse getWeatherByLocation(@RequestParam("location") String locaString);
+
 }

@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
 
 import jakarta.persistence.*;
 
@@ -14,6 +15,16 @@ import jakarta.persistence.*;
 @Getter
 @Setter
 public class Clothes {
+
+
+    //테스트용
+    @PrePersist
+    public void prePersist(){
+        if(this.createdAt==null){
+            this.createdAt=LocalDateTime.now();
+        }
+    }
+
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private Long clothesId;
@@ -32,6 +43,7 @@ public class Clothes {
 
     private String imageUrl;
 
+    private LocalDateTime createdAt;
     //이거 필요한지 체크해서 없애야할지 고민할것
     //private MultipartFile clothesImage;
 

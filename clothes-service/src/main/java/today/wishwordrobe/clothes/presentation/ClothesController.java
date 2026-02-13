@@ -37,7 +37,24 @@ public class ClothesController{//아래 setter 바꿔야한다
      위치 정보를 받아서 Weather Service에서 날씨를 조회한 후 옷 추천
      */
 
-    @GetMapping("/recommendations")
+    @GetMapping("/recommendations/coordinates")
+    public ResponseEntity<List<Clothes>> getRecommendedClothesByCoordinates(
+            @RequestParam("userId") Long userId,
+            @RequestParam("lat") double lat,
+            @RequestParam("lon") double lon,
+            @RequestParam(value = "category", required = false) ClothingCategory category  ){
+        
+        log.info("옷 추천 요청 (위경도): userId={}, lat={}, lon={}, category={}", 
+                 userId, lat, lon, category);
+
+        List<Clothes> clothes = clothesService.getClothesRecommendationByCoordinates(
+                userId, lat, lon, category);
+
+        log.info("추천된 옷 개수: {}", clothes.size());
+        return ResponseEntity.ok(clothes);
+    }
+//위치 이름 
+       @GetMapping("/recommendations/coordinates")
     public ResponseEntity<List<Clothes>> getRecommendedClothes(
             @RequestParam("userId") Long userId,
             @RequestParam("location") String location,

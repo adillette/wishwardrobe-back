@@ -7,19 +7,14 @@ spring:
 
   data:
     mongodb:
-      uri: mongodb://localhost:27017/wishweather
+      uri: mongodb://wish:wish123@localhost:27017/wishweather?authSource=wishnotification
+
       auto-index-creation: true
-
-    redis:
-      host: localhost
-      port: 6379
-      database: 2
-      lettuce:
-        pool:
-          max-active: 8
-          max-idle: 8
-          min-idle: 0
-
+  cache:
+    type: caffeine
+    caffeine:
+      spec: maximumSize=10000,expireAfterWrite=30m
+    
   codec:
     max-in-memory-size: 16MB
 
@@ -29,13 +24,21 @@ spring:
 # Weather API Configuration
 weather:
   api:
-    key: "dJ+1bX3L4D5nk3DlGR7hHcEexw5lZK9kOiQYE3SUIEmLH7O/Hd/7TBDEWzgPvqQJbYyWJpgLjR67KsK59dX3ow=="
-    url: "http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0"
-    villageFcstUrl: "/getVilageFcst"
-    ultraSrtFcstUrl: "/getUltraSrtFcst"
-    ultraSrtNcstUrl: "/getUltraSrtNcst"
+    api-key: "dJ%2B1bX3L4D5nk3DlGR7hHcEexw5lZK9kOiQYE3SUIEmLH7O%2FHd%2F7TBDEWzgPvqQJbYyWJpgLjR67KsK59dX3ow%3D%3D"
+    base-url: "http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0"
+    village-fcst-url: "/getVilageFcst"
+    ultra-srt-fcst-url: "/getUltraSrtFcst"
+    ultra-srt-ncst-url: "/getUltraSrtNcst"
+    # 자외선 지수 API (기상청 - 같은 키 사용)
+    uv-base-url: "https://apis.data.go.kr/1360000/LivingWthrIdxServiceV4"
+    uv-index-url: "/getUVIdxV3"
 
-
+# AirKorea api
+airkorea:
+  api:
+    api-key: "dJ%2B1bX3L4D5nk3DlGR7hHcEexw5lZK9kOiQYE3SUIEmLH7O%2FHd%2F7TBDEWzgPvqQJbYyWJpgLjR67KsK59dX3ow%3D%3D"
+    base-url: "http://apis.data.go.kr/B552584/ArpltnInforInqireSvc"
+    air-quality-url: "/getMsrstnAcctoRltmMesureDnsty"
 
 # Logging
 logging:
