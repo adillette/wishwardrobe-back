@@ -1,21 +1,25 @@
 version: '3.8'
 
 services:
-  # Redis - 캐싱 및 세션 관리
-  redis:
-    image: redis:7-alpine
-    container_name: wishwordrobe-redis
+  
+  # Oracle Database - 의류 데이터 저장
+  oracle-db:
+    image: gvenzl/oracle-xe:21-slim
+    container_name: wishwordrobe-oracle
     ports:
-      - "6379:6379"
+      - "1521:1521"
+    environment:
+      ORACLE_PASSWORD: oracle
+      APP_USER: clothes_user
+      APP_USER_PASSWORD: clothes123
     volumes:
-      - redis-data:/data
-    command: redis-server --appendonly yes
+      - oracle-data:/opt/oracle/oradata
     networks:
       - wishwordrobe-network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
+      test: ["CMD", "healthcheck.sh"]
+      interval: 30s
+      timeout: 10s
       retries: 5
 
   # MongoDB - 날씨 및 알림 데이터 저장
@@ -47,14 +51,14 @@ services:
       - "8081:8081"
     environment:
       - SPRING_PROFILES_ACTIVE=docker
-      - SPRING_DATA_REDIS_HOST=redis
-      - SPRING_DATA_REDIS_PORT=6379
-      - SPRING_DATASOURCE_URL=jdbc:h2:mem:clothesdb
+      - SPRING_DATASOURCE_URL=jdbc:oracle:thin:@oracle-db:1521:XE
+      - SPRING_DATASOURCE_USERNAME=system
+      - SPRING_DATASOURCE_PASSWORD=oracle
       - FILE_UPLOAD_DIR=/app/uploads
     volumes:
       - clothes-uploads:/app/uploads
     depends_on:
-      redis:
+      oracle-db:
         condition: service_healthy
     networks:
       - wishwordrobe-network
@@ -71,14 +75,12 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_DATA_MONGODB_URI=mongodb://admin:admin123@mongodb:27017/wishweather?authSource=admin
-      - SPRING_DATA_REDIS_HOST=redis
-      - SPRING_DATA_REDIS_PORT=6379
-      - SPRING_DATA_REDIS_DATABASE=2
+      
+      
     depends_on:
       mongodb:
         condition: service_healthy
-      redis:
-        condition: service_healthy
+      
     networks:
       - wishwordrobe-network
     restart: unless-stopped
@@ -94,16 +96,13 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_DATA_MONGODB_URI=mongodb://admin:admin123@mongodb:27017/wishnotification?authSource=admin
-      - SPRING_DATA_REDIS_HOST=redis
-      - SPRING_DATA_REDIS_PORT=6379
-      - SPRING_DATA_REDIS_DATABASE=3
+      
     volumes:
       - ./notification-service/src/main/resources/service-account-key.json:/app/service-account-key.json:ro
     depends_on:
       mongodb:
         condition: service_healthy
-      redis:
-        condition: service_healthy
+      
     networks:
       - wishwordrobe-network
     restart: unless-stopped
@@ -133,6 +132,6 @@ networks:
     driver: bridge
 
 volumes:
-  redis-data:
+  oracle-data:
   mongodb-data:
   clothes-uploads:

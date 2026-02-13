@@ -8,7 +8,6 @@ import org.springframework.web.reactive.function.client.WebClient;
 @Configuration
 public class WeatherServiceClientConfig {
   @Bean
-  public WebClient WeatherForecastResponse(WebClient.Builder builder,@Value("${weather-service.base-url}")String baseUrl){
-    return builder.baseUrl(baseUrl).build();
-  }
+  public WebClient weatherServiceWebClient(WebClient.Builder b, @Value("${weather-service.base-url}") String url) { 
+    return b.baseUrl(url).build(); }
 }
