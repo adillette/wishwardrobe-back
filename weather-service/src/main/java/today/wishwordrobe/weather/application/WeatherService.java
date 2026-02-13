@@ -31,7 +31,7 @@ import today.wishwordrobe.weather.util.WeatherGridConverter;
 import today.wishwordrobe.weather.util.WeatherGridConverter.GridCoordinate;
 import today.wishwordrobe.weather.util.LocationMapper;
 import org.springframework.cache.annotation.Cacheable;
-import static today.wishwordrobe.weather.configuration.CacheConfig.*;
+
 
 @Service
 @RequiredArgsConstructor
@@ -45,15 +45,10 @@ public class WeatherService {
     private final WebClient uvClient;
     private final LocationMapper locationMapper;
 
-    // 지역 좌표가 저장된 json 파일 경로 수정예정 ▶▶▶▶▶▶▶▶▶▽▶▶▶▶▶▶▶▶▶▽
+    
     private static final String LOCATION_JSON_PATH = "static/location_data.json";
 
-    /**
-     * 지역명으로 날씨 정보 조회
-     * 
-     * @param location
-     * @return
-     */
+  //    지역명으로 날씨 정보 조회
     public Mono<WeatherForecastDTO> getWeatherForecast(String location) {
         log.info("날씨 정보 요청: {}", location);
         // 1. 지역명으로 격자 좌표 찾기
@@ -72,15 +67,9 @@ public class WeatherService {
                 .doOnError(e -> log.error("날씨 정보 조회 실패: {}", e.getMessage()));
     }
 
-    /**
-     * 위경도로 날씨 정보 조회
-     * 
-     * @param longitude 경도
-     * @param latitude  위도
-     * @return 날씨 정보
-     */
-    public Mono<WeatherForecastDTO> getWeatherByCoordinates(double longitude, double latitude) {
-        log.info("위경도로 날씨 정보 요청: 경도={}, 위도={}", longitude, latitude);
+   //위경도로 날씨 정보 조회 lat, lon 순서
+    public Mono<WeatherForecastDTO> getWeatherByCoordinates(double latitude, double longitude) {
+        log.info("위경도로 날씨 정보 요청: 위도={},경도={}", latitude, longitude);
 
         // 1. 위경도 -> 격자 좌표 변환
         GridCoordinate grid = gridConverter.toGrid(longitude, latitude);
@@ -293,17 +282,11 @@ public class WeatherService {
                 .doOnError(error -> log.error("통합 날씨 정보 병렬 조회 실패: {}", location, error));
     }
 
-    /**
-     * 위경도 기반으로 날씨 + 미세먼지 + 자외선 정보를 병렬로 조회
-     * 캐싱 적용으로 5분간 동일한 좌표 요청은 캐시에서 반환
-     *
-     * @param longitude 경도
-     * @param latitude  위도
-     * @return 통합 날씨 정보
-     */
-    @Cacheable(value = INTEGRATED_WEATHER_CACHE, key = "#longitude + '_' + #latitude")
-    public Mono<IntegratedWeatherDto> getIntegratedWeatherByCoordinates(double longitude, double latitude) {
-        log.info("위경도 기반 통합 날씨 정보 조회 시작: lon={}, lat={}", longitude, latitude);
+    //위경도 기반 통합 날씨 lat, lon
+    @Cacheable( cacheNames = "integratedWeatherCache",
+     key = "#longitude + '_' + #latitude")
+    public Mono<IntegratedWeatherDto> getIntegratedWeatherByCoordinates(double latitude,double longitude) {
+        log.info("위경도 기반 통합 날씨 정보 조회 시작: lat={}, lon={}", latitude, longitude);
         long startTime = System.currentTimeMillis();
 
         // 1. 위경도 -> 격자 좌표 변환

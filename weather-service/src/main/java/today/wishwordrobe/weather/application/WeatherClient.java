@@ -1,30 +1,29 @@
 package today.wishwordrobe.weather.application;
 
-import today.wishwordrobe.weather.dto.AirQualityResponse;
-import today.wishwordrobe.weather.dto.UVIndexResponse;
-import today.wishwordrobe.weather.dto.VillageForecastResponse;
-import today.wishwordrobe.weather.configuration.AirKoreaConfig;
-import today.wishwordrobe.weather.configuration.RedisWeatherCache;
-import today.wishwordrobe.weather.configuration.WeatherConfig;
-import today.wishwordrobe.weather.domain.Geographic;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import java.time.format.DateTimeFormatter;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.web.util.UriUtils;
+
+import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
-
-import java.util.*;
-import java.net.URI;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.Duration;
+import today.wishwordrobe.weather.configuration.AirKoreaConfig;
+import today.wishwordrobe.weather.configuration.WeatherConfig;
+import today.wishwordrobe.weather.domain.Geographic;
+import today.wishwordrobe.weather.dto.AirQualityResponse;
+import today.wishwordrobe.weather.dto.UVIndexResponse;
+import today.wishwordrobe.weather.dto.VillageForecastResponse;
 
 @Slf4j
 @Component
@@ -35,8 +34,7 @@ public class WeatherClient {
     private  WeatherConfig config;
     @Autowired
     private  AirKoreaConfig airKoreaConfig;
-    @Autowired
-    private RedisWeatherCache redisWeatherCache;
+  
 
    //격자 좌표 조회
     public Mono<VillageForecastResponse> getVillageForecast(Geographic location) {

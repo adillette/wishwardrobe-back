@@ -21,6 +21,7 @@ self.addEventListener('push', (event) => {
         body: data.message ?? '',
         icon: data.icon ?? '/icon.png',
         data: { clickAction: data.clickAction },
+        image: data.image,
         tag: 'webpush-notification',
         requireInteraction: false
       }).then(() => {
