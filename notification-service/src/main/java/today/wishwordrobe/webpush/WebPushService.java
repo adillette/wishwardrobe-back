@@ -67,6 +67,7 @@ public class WebPushService {
         payload.put("clickAction", request.getClickAction());
         payload.put("data", request.getData());
         payload.put("url", request.getUrl());
+        payload.put("image", request.getImage());
 
         try {
             return OBJECT_MAPPER.writeValueAsString(payload);

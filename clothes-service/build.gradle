@@ -28,14 +28,11 @@ dependencies {
     // Spring Cloud OpenFeign (MSA 동기 통신)
     implementation 'org.springframework.cloud:spring-cloud-starter-openfeign:4.1.0'
 
-
-
     // Cache
     implementation 'org.springframework.boot:spring-boot-starter-cache'
-    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
-    implementation 'org.ehcache:ehcache:3.10.8:jakarta'
-    implementation 'javax.cache:cache-api:1.1.1'
-    implementation 'io.lettuce:lettuce-core'
+      
+    implementation 'com.github.ben-manes.caffeine:caffeine:3.2.3'
+
 
     // JWT
     // implementation 'io.jsonwebtoken:jjwt-api:0.12.5'
@@ -46,16 +43,17 @@ dependencies {
     implementation 'at.favre.lib:bcrypt:0.10.2'
 
     // Database
-    runtimeOnly 'com.h2database:h2'
-    runtimeOnly 'com.oracle.database.jdbc:ojdbc8'
+    runtimeOnly 'com.oracle.database.jdbc:ojdbc11'
 
     // Lombok
     compileOnly 'org.projectlombok:lombok:1.18.30'
     annotationProcessor 'org.projectlombok:lombok:1.18.30'
 
     // Test
+   
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    
+    testImplementation 'org.wiremock:wiremock-standalone:3.5.4'
+    testRuntimeOnly 'com.h2database:h2'
 }
 
 tasks.named('test') {

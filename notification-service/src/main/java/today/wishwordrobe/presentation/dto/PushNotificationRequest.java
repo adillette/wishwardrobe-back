@@ -19,15 +19,19 @@ public class PushNotificationRequest {
     private Map<String, String> data;
     private String url; //알림 클릭하면 이동할 url
 
+    private String image;
 
 
-
-    public PushNotificationRequest(String title, String message, String icon, String clickAction, Map<String, String> data, String url) {
+    public PushNotificationRequest(String title, String message,
+         String icon, String clickAction,
+          Map<String, String> data, String url,
+          String image) {
         this.title = title;
         this.message = message;
         this.icon = icon;
         this.clickAction = clickAction;
         this.data = data;
         this.url = url;
+            this.image=image;
     }
 }

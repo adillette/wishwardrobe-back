@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,11 +16,18 @@ import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 import today.wishwordrobe.application.PushNotificationService;
 import today.wishwordrobe.firebase.FCMPushNotificationRequest;
+import today.wishwordrobe.presentation.dto.BroadcastJobStatus;
+import today.wishwordrobe.presentation.dto.FcmTokenRequest;
 import today.wishwordrobe.presentation.dto.PushNotificationRequest;
+import today.wishwordrobe.webpush.BroadcastJobService;
+import today.wishwordrobe.webpush.BroadcastJobService.JobView;
 @Slf4j
 @RestController
 @RequestMapping("/notification")
 public class PushNotificationController {
+
+    @Autowired
+    private BroadcastJobService broadcastJobService;
 
     @Autowired
     private  PushNotificationService pushNotificationService;
@@ -39,8 +47,7 @@ public class PushNotificationController {
         return Mono.just(publicKey);
     }
 
-    //구독 정보 저장
-    //private List<Map<String, Object>> subscriptions = new ArrayList<>();
+    
 
     @PostMapping("/subscribe")
     public Mono<ResponseEntity<Void>> subscribe(@RequestBody Map<String, Object> subscription) {
@@ -99,14 +106,58 @@ public class PushNotificationController {
     }
 
     @PostMapping("/broadcast")
-    public Mono<ResponseEntity<Map<String, Object>>> broadcast(@RequestBody PushNotificationRequest request) {
-        return pushNotificationService.sendNotification(request)
-                .map(result -> ResponseEntity.ok(result))
+    public Mono<ResponseEntity<Map<String,Object>>> broadcast(@RequestBody PushNotificationRequest request){
+        return broadcastJobService.enqueue(request)
+            .map(jobId->ResponseEntity.accepted().body(Map.of("jobId",jobId)));
+    }
+    //상태 조회 
+    @GetMapping("/jobs/{jobId}")
+    public Mono<ResponseEntity<JobView>> job(@PathVariable String jobId) {
+         return broadcastJobService.get(jobId)
+        .map(ResponseEntity::ok)
+        .switchIfEmpty(Mono.just(ResponseEntity.notFound().build()));
+    } 
+
+    /**
+     * FCM 토큰 등록 (중복 방지)
+     * POST /notification/fcm/register
+     * Body: { "userId": "user123", "token": "fcm_token_abc", "deviceId": "device_001" }
+     */
+    @PostMapping("/fcm/register")
+    public Mono<ResponseEntity<String>> registerFcmToken(@RequestBody FcmTokenRequest request) {
+        return pushNotificationService.registerFcmToken(request)
+                .map(saved -> ResponseEntity.ok("FCM token registered for userId: " + saved.getUserId()))
                 .onErrorResume(e -> Mono.just(
-                        ResponseEntity.internalServerError().body(
-                                Map.of("error", e.getMessage())
-                        )
+                        ResponseEntity.badRequest().body("Error: " + e.getMessage())
                 ));
+    }
+
+    /**
+     * 특정 FCM 토큰 삭제 (디바이스 단위 로그아웃)
+     * DELETE /notification/fcm/unregister?token=xxx
+     */
+    @PostMapping("/fcm/unregister")
+    public Mono<ResponseEntity<String>> unregisterFcmToken(@RequestBody Map<String, String> request) {
+        String token = request.get("token");
+        if (token == null) {
+            return Mono.just(ResponseEntity.badRequest().body("token is required"));
+        }
+        return pushNotificationService.unregisterFcmToken(token)
+                .then(Mono.just(ResponseEntity.ok("FCM token unregistered")));
+    }
+
+    /**
+     * 특정 사용자의 모든 FCM 토큰 삭제 (전체 로그아웃)
+     * DELETE /notification/fcm/unregister-user?userId=xxx
+     */
+    @PostMapping("/fcm/unregister-user")
+    public Mono<ResponseEntity<String>> unregisterAllFcmTokens(@RequestBody Map<String, String> request) {
+        String userId = request.get("userId");
+        if (userId == null) {
+            return Mono.just(ResponseEntity.badRequest().body("userId is required"));
+        }
+        return pushNotificationService.unregisterAllFcmTokensByUserId(userId)
+                .then(Mono.just(ResponseEntity.ok("All FCM tokens unregistered for userId: " + userId)));
     }
 }
 

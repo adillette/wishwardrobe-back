@@ -1,18 +1,27 @@
 package today.wishwordrobe.application;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import today.wishwordrobe.firebase.FCMPushNotificationRequest;
 import today.wishwordrobe.firebase.FCMService;
+import today.wishwordrobe.infrastructure.FcmTokenRepository;
 import today.wishwordrobe.infrastructure.WebPushSubscriptionRepository;
+import today.wishwordrobe.presentation.dto.FcmTokenDocument;
+import today.wishwordrobe.presentation.dto.FcmTokenRequest;
+import today.wishwordrobe.presentation.dto.BroadcastJobStatus;
 import today.wishwordrobe.presentation.dto.PushNotificationRequest;
 import today.wishwordrobe.presentation.dto.WebPushSubscriptionDocument;
 import today.wishwordrobe.webpush.WebPushNotificationRequest;
@@ -28,15 +37,114 @@ public class PushNotificationService {
     private WebPushSubscriptionRepository webPushSubscriptionRepository;
 
     @Autowired
+    private FcmTokenRepository fcmTokenRepository;
+
+    @Autowired
     private FCMService fcmService;
     @Autowired
     private WebPushService webPushService;
 
+    private final ConcurrentHashMap<String, BroadcastJobStatus> broadcastJobs = new ConcurrentHashMap<>();
+
     public PushNotificationService(FCMService fcmService, WebPushService webPushService,
-            WebPushSubscriptionRepository webPushSubscriptionRepository) {
+            WebPushSubscriptionRepository webPushSubscriptionRepository,
+            FcmTokenRepository fcmTokenRepository) {
         this.fcmService = fcmService;
         this.webPushService = webPushService;
         this.webPushSubscriptionRepository = webPushSubscriptionRepository;
+        this.fcmTokenRepository = fcmTokenRepository;
+    }
+
+    public record BroadcastStats(long total, long success, long failed, long gone410) {
+    }
+
+    public Mono<BroadcastStats> broadcastWebPushFromDbWithStats(PushNotificationRequest request) {
+        int concurrency = 50;
+        AtomicLong successCount = new AtomicLong(0);
+        AtomicLong failedCount = new AtomicLong(0);
+        AtomicLong gone410Count = new AtomicLong(0);
+        return webPushSubscriptionRepository.count()
+                .flatMap(totalSubscribers -> webPushSubscriptionRepository.findAll()
+                        .flatMap(doc -> {
+                            WebPushSubscription subscription = new WebPushSubscription();
+                            subscription.setEndpoint(doc.getEndpoint());
+
+                            WebPushSubscription.Keys keys = new WebPushSubscription.Keys();
+                            keys.setP256dh(doc.getP256dh());
+                            keys.setAuth(doc.getAuth());
+                            subscription.setKeys(keys);
+
+                            WebPushNotificationRequest webRequest = WebPushNotificationRequest.builder()
+                                    .title(request.getTitle())
+                                    .message(request.getMessage())
+                                    .icon(request.getIcon())
+                                    .clickAction(request.getClickAction())
+                                    .data(request.getData())
+                                    .url(request.getUrl())
+                                    .image(request.getImage())
+                                    .subscription(subscription)
+                                    .build();
+                            return webPushService.sendNotification(webRequest)
+                                    .doOnSuccess(v -> successCount.incrementAndGet()) // 성공 시 +1
+                                    .onErrorResume(error -> {
+                                        failedCount.incrementAndGet(); // 실패 시 +1
+
+                                        // 410 Gone이면 구독 삭제
+                                        if (error instanceof WebPushSendException ex && ex.getStatusCode() == 410) {
+                                            gone410Count.incrementAndGet(); // 410 카운트 +1
+                                            return webPushSubscriptionRepository
+                                                    .deleteById(subscription.getEndpoint())
+                                                    .then(); // 삭제 후 완료
+                                        }
+                                        return Mono.empty(); // 다른 에러는 무시하고 진행
+                                    });
+                        }, concurrency) // 50개씩 병렬 처리
+                        .then(Mono.fromSupplier(() ->
+                        // 3. 최종 통계 반환
+                        new BroadcastStats(
+                                totalSubscribers, // 전체 구독자 수
+                                successCount.get(), // 성공 건수
+                                failedCount.get(), // 실패 건수
+                                gone410Count.get() // 410 Gone 건수
+                        ))));
+    }
+
+    /**
+     * FCM 토큰 등록 (중복 방지: token이 PK)
+     * - 같은 token이 들어오면 기존 레코드를 덮어씀 (upsert)
+     */
+    public Mono<FcmTokenDocument> registerFcmToken(FcmTokenRequest request) {
+        if (request.getUserId() == null || request.getToken() == null) {
+            return Mono.error(new IllegalArgumentException("userId and token are required"));
+        }
+
+        FcmTokenDocument doc = FcmTokenDocument.builder()
+                .token(request.getToken())
+                .userId(request.getUserId())
+                .deviceId(request.getDeviceId())
+                .createdAt(LocalDateTime.now())
+                .lastUsedAt(LocalDateTime.now())
+                .build();
+
+        return fcmTokenRepository.save(doc)
+                .doOnSuccess(saved -> log.info("FCM token registered: userId={}, token={}",
+                        request.getUserId(), request.getToken()));
+    }
+
+    /**
+     * 특정 토큰 삭제 (디바이스 단위 로그아웃)
+     */
+    public Mono<Void> unregisterFcmToken(String token) {
+        return fcmTokenRepository.deleteById(token)
+                .doOnSuccess(v -> log.info("FCM token deleted: token={}", token));
+    }
+
+    /**
+     * 특정 사용자의 모든 토큰 삭제 (전체 로그아웃)
+     */
+    public Mono<Void> unregisterAllFcmTokensByUserId(String userId) {
+        return fcmTokenRepository.deleteByUserId(userId)
+                .doOnSuccess(v -> log.info("All FCM tokens deleted for userId={}", userId));
     }
 
     public Mono<Void> saveSubscription(Map<String, Object> rawSubscription) {
@@ -54,7 +162,15 @@ public class PushNotificationService {
         // 브로드캐스트 요청: WebPushNotificationRequest/FCMPushNotificationRequest가 아니면
         // MongoDB에 저장된 구독자 전체에게 발송한다.
         if (!(request instanceof WebPushNotificationRequest) && !(request instanceof FCMPushNotificationRequest)) {
-            return broadcastWebPushFromDb(request);
+            return broadcastWebPushFromDbWithStats(request)  // ← 메서드 이름 변경
+                .map(stats -> {
+                    Map<String, Object> results = new HashMap<>();
+                    results.put("total", stats.total());
+                    results.put("success", stats.success());
+                    results.put("failed", stats.failed());
+                    results.put("gone410", stats.gone410());
+                    return results;
+                });
         }
 
         // 결과를 저장할 맵
@@ -109,6 +225,32 @@ public class PushNotificationService {
         return Mono.when(tasks).thenReturn(results);
     }
 
+    public Mono<BroadcastJobStatus> startBroadcastJob(PushNotificationRequest request) {
+        String jobId = UUID.randomUUID().toString();
+        BroadcastJobStatus job = BroadcastJobStatus.pending(jobId, LocalDateTime.now());
+        broadcastJobs.put(jobId, job);
+
+        broadcastWebPushFromDbWithStats(request)
+                .doOnSubscribe(sub -> job.markStarted(LocalDateTime.now()))
+                .doOnSuccess(stats -> {  // stats는 BroadcastStats
+                // BroadcastJobStatus의 markDone을 stats를 받도록 수정해야 함
+                job.markDone(LocalDateTime.now(), stats);
+            })
+                .doOnError(e -> job.markFailed(LocalDateTime.now(), e))
+                .subscribeOn(Schedulers.boundedElastic())
+                .subscribe();
+
+        return Mono.just(job);
+    }
+
+    public Mono<BroadcastJobStatus> getBroadcastJob(String jobId) {
+        BroadcastJobStatus job = broadcastJobs.get(jobId);
+        if (job == null) {
+            return Mono.empty();
+        }
+        return Mono.just(job);
+    }
+
     private Mono<Map<String, Object>> broadcastWebPushFromDb(PushNotificationRequest request) {
         return webPushSubscriptionRepository.count()
                 .flatMap(count -> {
@@ -140,7 +282,9 @@ public class PushNotificationService {
                                                 e))
                                         .onErrorResume(e -> {
                                             if (e instanceof WebPushSendException ex && ex.getStatusCode() == 410) {
-                                                log.warn("WebPush subscription expired (410 Gone). Re-subscribe required. endpoint={}", doc.getEndpoint());
+                                                log.warn(
+                                                        "WebPush subscription expired (410 Gone). Re-subscribe required. endpoint={}",
+                                                        doc.getEndpoint());
                                                 // 만료된 구독은 DB에서 제거 (다음 broadcast에서 재시도 안 함)
                                                 return webPushSubscriptionRepository.deleteById(doc.getEndpoint())
                                                         .then(Mono.empty());

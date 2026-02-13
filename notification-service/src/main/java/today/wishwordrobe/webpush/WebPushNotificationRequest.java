@@ -16,8 +16,9 @@ public class WebPushNotificationRequest extends PushNotificationRequest {
 
 
     public WebPushNotificationRequest(String title, String message, String icon, String clickAction,
-                                      Map<String, String> data, String url, WebPushSubscription subscription) {
-        super(title, message, icon, clickAction, data, url);
+                                      Map<String, String> data, String url, String image,
+                                      WebPushSubscription subscription) {
+        super(title, message, icon, clickAction, data, url,image);
         this.subscription = subscription;
     }
 }

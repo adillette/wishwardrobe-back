@@ -5,6 +5,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Scheduler;
+import reactor.core.scheduler.Schedulers;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -16,14 +18,15 @@ public class FCMService {
     private final Logger logger = LoggerFactory.getLogger(FCMService.class);
 
     public Mono<String> sendPushNotification(FCMPushNotificationRequest  request) {
-        return Mono.fromCallable((Callable<? extends String>) () -> {
+        return Mono.fromCallable( () -> {
             Message message = prepareMessage(request);
             return sendAndGetResponse(message);
-        });
+        })
+        .subscribeOn(Schedulers.boundedElastic());
     }
 
     public Mono<String> sendTopicMessage(FCMPushNotificationRequest  request) {
-        return Mono.fromCallable((Callable<? extends String>) () -> {
+        return Mono.fromCallable( () -> {
             Message.Builder builder = Message.builder()
                     .setNotification(Notification.builder()
                             .setTitle(request.getTitle())
@@ -37,11 +40,12 @@ public class FCMService {
             
             Message message = builder.build();
             return sendAndGetResponse(message);
-        });
+        })
+        .subscribeOn(Schedulers.boundedElastic());
     }
 
     public Mono<String> sendTokenMessage(FCMPushNotificationRequest  request) {
-        return Mono.fromCallable((Callable<? extends String>) () -> {
+        return Mono.fromCallable(() -> {
             Message.Builder builder = Message.builder()
                     .setNotification(Notification.builder()
                             .setTitle(request.getTitle())
@@ -55,7 +59,8 @@ public class FCMService {
             
             Message message = builder.build();
             return sendAndGetResponse(message);
-        });
+        })
+        .subscribeOn(Schedulers.boundedElastic());
     }
 
     private Message prepareMessage(FCMPushNotificationRequest  request) {
@@ -102,5 +107,6 @@ public class FCMService {
         return FirebaseMessaging.getInstance().sendAsync(message).get();
     }
 
-}
+};
+
 
