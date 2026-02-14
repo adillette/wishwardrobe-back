@@ -7,6 +7,6 @@ import lombok.Getter;
 @AllArgsConstructor
 public class FileInfo {
 
-    private final String fileName;
-    private final String filePath;
+    private  String fileName;
+    private  String filePath;
 }

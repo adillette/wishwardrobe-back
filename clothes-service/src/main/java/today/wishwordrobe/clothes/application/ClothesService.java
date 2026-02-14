@@ -26,7 +26,7 @@ public class ClothesService {
 
     private final ClothesRepository clothesRepository;
     private final WeatherServiceClient weatherServiceClient;
-
+    public String IMAGE_BASE_URL;
     // 위경도에 맞는추천
     public List<Clothes> getClothesRecommendationByCoordinates(
             Long userId,
@@ -53,6 +53,7 @@ public class ClothesService {
         return candidates.stream()
                 .sorted( Comparator.comparing(Clothes::getCreatedAt))
                 .limit(5)
+                .map(this::fillImageUrl)
                 .collect(Collectors.toList());
     }
 
@@ -71,7 +72,24 @@ public class ClothesService {
         return candidates.stream()
                 .sorted(Comparator.comparing(Clothes::getCreatedAt)) // ← 이것만 추가
                 .limit(5)
+                .map(this::fillImageUrl)
                 .collect(Collectors.toList());
+    }
+
+    private Clothes fillImageUrl(Clothes clothes){
+        List<Object[]> rawImages=clothesRepository.getImageData(clothes.getClothesId());
+        if(!rawImages.isEmpty()){
+            Object[] firstImage=rawImages.get(0);
+            String imagePath= (String)firstImage[1];
+            String imageName=(String) firstImage[2];
+
+            String imageUrl=(imagePath!=null && !imageName.isEmpty()) ? imagePath : IMAGE_BASE_URL + imageName;
+            clothes.setImageUrl(imageUrl);
+
+        }else{
+            clothes.setImageUrl(IMAGE_BASE_URL + "default-clothes.png");
+        }
+        return clothes;
     }
 
     // 특정 userId의 옷 전체 조회 (옷장 목록용)

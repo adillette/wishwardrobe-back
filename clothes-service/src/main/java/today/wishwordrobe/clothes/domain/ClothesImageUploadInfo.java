@@ -8,14 +8,14 @@ import lombok.Getter;
 @Builder
 @AllArgsConstructor
 public class ClothesImageUploadInfo {
-    private final Long id;
-    private final  Long clothesId;
+    private  Long id;  // clothesId를 의미 (이름 잘못 지음)
+    private  Long clothesId;
 
-    private final String imageName;
+    private String imageName;
 
-    private final String imagePath;
+    private  String imagePath;
 
-    private final int seq;
+    private  int seq;
 
     public ClothesImageUploadInfo(Long clothesId,String imageName, String imagePath, int seq) {
         this.id = null;

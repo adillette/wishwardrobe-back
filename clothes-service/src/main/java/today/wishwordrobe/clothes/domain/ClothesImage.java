@@ -11,15 +11,15 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(force = true)
 public class ClothesImage {
 
-    private final Long id;
+    private  Long id;
 
-    private final  Long clothesId;
+    private Long clothesId;
 
-    private final String imageName;
+    private String imageName;
 
-    private final String imagePath;
+    private String imagePath;
 
-    private final int seq;
+    private int seq;
 
 
 }

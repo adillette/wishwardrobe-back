@@ -6,11 +6,11 @@ import lombok.ToString;
 @Getter
 @ToString
 public class ClothesInfo {
-    private final Long id;
-    private final Long clothesId;
-    private final String name;
-    private final ClothingCategory category;
-    private final String imageUrl;
+    private  Long id;
+    private  Long clothesId;
+    private  String name;
+    private  ClothingCategory category;
+    private  String imageUrl;
 
     public ClothesInfo(Long id,Long clothesId, String name, ClothingCategory category, String imageUrl) {
         this.id = id;
