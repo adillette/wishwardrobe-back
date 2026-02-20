@@ -53,20 +53,7 @@ public class ClothesController{//아래 setter 바꿔야한다
         log.info("추천된 옷 개수: {}", clothes.size());
         return ResponseEntity.ok(clothes);
     }
-//위치 이름 
-       @GetMapping("/recommendations/coordinates")
-    public ResponseEntity<List<Clothes>> getRecommendedClothes(
-            @RequestParam("userId") Long userId,
-            @RequestParam("location") String location,
-            @RequestParam(value = "category", required = false) ClothingCategory category  ){
-        log.info("옷 추천 요청 (MSA): userId={}, location={}, category={}", userId, location, category);
 
-        // Weather 서비스에서 날씨 정보를 가져와서 옷 추천 (Feign Client 사용)
-        List<Clothes> clothes = clothesService.getClothesRecommendationByLocation(userId, location, category);
-
-        log.info("추천된 옷 개수: {}", clothes.size());
-        return ResponseEntity.ok(clothes);
-    }
 
     /*
      ★★ 추천 (레거시) ★★★

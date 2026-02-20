@@ -2,6 +2,7 @@ package today.wishwordrobe.clothes.infrastructure;
 
 import today.wishwordrobe.clothes.domain.Clothes;
 import today.wishwordrobe.clothes.domain.ClothesImageUploadInfo;
+import today.wishwordrobe.clothes.domain.ClothesInfo;
 import today.wishwordrobe.clothes.domain.ClothingCategory;
 import today.wishwordrobe.clothes.domain.FileInfo;
 import today.wishwordrobe.clothes.domain.TempRange;
@@ -25,6 +26,14 @@ public interface ClothesRepository extends JpaRepository<Clothes,Long> {
     List<Clothes> findByUserIdAndTempRangeAndCategory(Long userId, TempRange tempRange, ClothingCategory category);
     List<Clothes> findByUserIdAndTempRange(Long userId, TempRange tempRange);
 
+    @Query("SELECT new today.wishwordrobe.clothes.domain.ClothesInfo(" +
+       "c.clothesId, c.name, c.category, c.imageUrl) " +
+       "FROM Clothes c WHERE c.clothesId = :clothesId")
+    ClothesInfo getClothesInfo(@Param("clothesId")Long clothesId);
+    
+
+
+
     @Modifying
     @Query(value=" INSERT INTO FILE_INFO(NEW_FILE_NAME, FILE_PATH, USER_ID) "+
     " VALUES(:fileName, :filePath, :userId",nativeQuery = true)
@@ -41,7 +50,7 @@ public interface ClothesRepository extends JpaRepository<Clothes,Long> {
 
     @Modifying
     @Query(value = "INSERT INTO CLOTHES_IMAGE (CLOTHES_ID,IMAGE_PATH,IMAGE_NAME,SEQ) "+
-    " VALUES (:id, :imagePath, :imageName, :seq)", nativeQuery = true)
+    " VALUES (:clothesId, :imagePath, :imageName, :seq)", nativeQuery = true)
     void saveImage(@Param("clothesId")Long clothesId,
                    @Param("imagePath") String imagePath,
                    @Param("imageName")String imageName,
@@ -77,6 +86,7 @@ public interface ClothesRepository extends JpaRepository<Clothes,Long> {
     @Query(value = "SELECT FILE_PATH FROM CLOTHES_IMAGE WHERE CLOTHES_ID = :clothesId", nativeQuery = true)
     List<String> getImagePaths(@Param("clothesId") long clothesId);
 
+  
 
 
     /*
@@ -92,6 +102,8 @@ public interface ClothesRepository extends JpaRepository<Clothes,Long> {
     @Modifying
     @Query(value = "DELETE FROM FILE_INFO WHERE USER_ID=:userId", nativeQuery = true)
     void deleteFilesByUserId(@Param("userId") Long userId);
+    
+    
 
 
 

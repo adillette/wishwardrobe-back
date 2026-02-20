@@ -1,6 +1,8 @@
 package today.wishwordrobe.clothes.application;
 
+import today.wishwordrobe.clothes.domain.Clothes;
 import today.wishwordrobe.clothes.domain.ClothesImageUploadInfo;
+import today.wishwordrobe.clothes.domain.ClothesInfo;
 import today.wishwordrobe.clothes.domain.FileInfo;
 import today.wishwordrobe.clothes.domain.FileUtil;
 import today.wishwordrobe.exception.FileDeleteException;
@@ -15,7 +17,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.FileSystemUtils;
 import org.springframework.web.multipart.MultipartFile;
 import java.util.*;
-import java.util.List;
 import java.util.stream.Collectors;
 import java.io.File;
 import java.io.IOException;
@@ -85,7 +86,7 @@ public class FileService {
         List<ClothesImageUploadInfo> imageUploadInfos = fileInfos.stream()
                 .map(info -> FileUtil.toImageUploadInfo(id, info,fileInfos.indexOf(info)+1 ))
                 .collect(Collectors.toList());
-        clothesRepository.uploadImages(imageUploadInfos);
+        clothesRepository.uploadImages(id,imageUploadInfos);
     }
 
 
@@ -95,11 +96,12 @@ public class FileService {
         return clothesRepository.isExistImages(clothesId);
     }
 
+    
 
-    @Transactional(readOnly = true)
-    public List<ClothesImageUploadInfo> getImages(Long clothesId) {
-
-        return clothesRepository.getImages(clothesId);
+    
+    public ClothesInfo getClothesInfo(Long clothesId) {
+        return clothesRepository.getClothesInfo(clothesId);
+        
     }
 
 
