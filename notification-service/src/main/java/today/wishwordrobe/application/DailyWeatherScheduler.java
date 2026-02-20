@@ -1,8 +1,11 @@
 package today.wishwordrobe.application;
 
+import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.hc.client5.http.auth.AuthStateCacheable;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -12,21 +15,31 @@ import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 import today.wishwordrobe.firebase.FCMPushNotificationRequest;
 import today.wishwordrobe.firebase.FCMService;
+import today.wishwordrobe.presentation.dto.ClothesDto;
 import today.wishwordrobe.presentation.dto.PushNotificationRequest;
 import today.wishwordrobe.presentation.dto.WeatherForecastResponse;
+import today.wishwordrobe.webpush.BroadcastJobService;
 
 @Component
 @Slf4j
 public class DailyWeatherScheduler {
 
   @Autowired
+  @Qualifier("weatherServiceWebClient")
   private WebClient weatherServiceWebClient;
+
+  @Autowired
+  @Qualifier("clothesServiceWebClient")
+  private WebClient clothesServiceWebClient;
 
   @Autowired
   private FCMService fcmService;
 
   @Autowired
   private PushNotificationService pushNotificationService;
+
+  @Autowired
+  private BroadcastJobService broadcastJobService;
 
   @Value("${notification.daily.enabled:true}")
   private boolean enabled;
@@ -52,6 +65,10 @@ public class DailyWeatherScheduler {
   @Value("${notification.daily.message:}")
   private String defaultMessage;
 
+
+  //대표아이디로 먼저 테스트
+   @Value("${notification.daily.default-user-id:1}")  // ← 추가
+  private Long defaultUserId;
   @Value("${notification.daily.click-action:https://wishwordrobe.today}")
   private String clickAction;
 
@@ -134,19 +151,49 @@ public class DailyWeatherScheduler {
         .doOnError(e -> log.error("FCM failed", e));
   }
 
-  private Mono<Map<String, Object>> sendWebPushBroadcast(String title, String message) {
-    PushNotificationRequest request = PushNotificationRequest.builder()
-        .title(title)
-        .message(message)
-        .icon(null)
-        .clickAction(clickAction)
-        .data(Map.of("type", "weather", "lat", String.valueOf(lat), "lon", String.valueOf(lon)))
-        .url(null)
-        .build();
+  private Mono<Map<String, Object>> sendWebPushBroadcast(String title, 
+    String message) {
 
-    return pushNotificationService.sendNotification(request)
-        .doOnSuccess(r -> log.info("WebPush broadcast result: {}", r))
-        .doOnError(e -> log.error("WebPush broadcast failed", e));
+      return fetchRecommendedClothesImage().flatMap(imageUrl->{
+         log.info("Fetched recommended clothes image: {}", imageUrl);
+         PushNotificationRequest request =PushNotificationRequest.builder()
+                                            .title(title)
+                                            .message(message)
+                                            .icon(null)
+                                            .clickAction(clickAction)
+                                            .data(Map.of("type", "weather", "lat", String.valueOf(lat), "lon", String.valueOf(lon)))
+                                            .url(null)
+                                            .image(imageUrl)
+                                            .build();
+      return broadcastJobService.enqueue(request)
+      .map(jobId -> {
+        Map<String, Object> result = new HashMap<>();
+        result.put("jobId", jobId);
+        result.put("type", "webpush");
+        return result;
+      })
+      .doOnSuccess(result -> log.info("WebPush broadcast job queued: {}", result))
+      .doOnError(e -> log.error("WebPush broadcast job enqueue failed", e));
+  });
+}
+      //clothes-service 에서 추천 옷 이미지 url 가져오기
+ 
+  private Mono<String> fetchRecommendedClothesImage() {
+    return clothesServiceWebClient.get()
+        .uri(uri -> uri.path("/recommendations")
+            .queryParam("userId", defaultUserId)
+            .queryParam("lat", lat)
+            .queryParam("lon", lon)
+            .build())
+        .retrieve()
+        .bodyToFlux(ClothesDto.class)
+        .next()  // 첫 번째만
+        .map(ClothesDto::getImageUrl)
+        .doOnNext(url -> log.info("Clothes recommendation image URL: {}", url))
+        .onErrorResume(e -> {
+          log.warn("Failed to fetch clothes recommendation, using no image. Error: {}", e.getMessage());
+          return Mono.just((String) null);  // 실패 시 null로 fallback
+        });
   }
 
 }

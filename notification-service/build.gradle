@@ -27,7 +27,7 @@ dependencies {
     // Cache
     implementation 'org.springframework.boot:spring-boot-starter-cache'
     
-    implementation 'com.github.ben-manes.caffeine:caffeine:3.2.2'
+    implementation 'com.github.ben-manes.caffeine:caffeine'
 
     // Firebase Cloud Messaging
     implementation 'com.google.firebase:firebase-admin:9.4.3'
@@ -51,7 +51,7 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'io.projectreactor:reactor-test'
     // https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-thymeleaf
-implementation 'org.springframework.boot:spring-boot-starter-thymeleaf:3.5.4'
+    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
 }
 
 tasks.named('test') {
