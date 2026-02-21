@@ -49,7 +49,7 @@ public class BroadcastJobService {
     JobState state= new JobState();
     jobs.put(jobId, state);
 
-     pushNotificationService.broadcastWebPushFromDbWithStats(request)
+     pushNotificationService.broadcastAllFromDbWithStats(request)
         .publishOn(Schedulers.boundedElastic()) // job 실행을 요청 쓰레드와 분리
         .doOnSuccess(stats -> {
           state.total = stats.total();

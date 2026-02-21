@@ -6,7 +6,9 @@ import lombok.experimental.SuperBuilder;
 
 import java.util.Map;
 
-
+//웹푸시 발송용 dto 공통알림 타이틀, message, data,url,image등을 담음
+//서버가 특정 구독 대상에게 웹푸시를 보낼때 사용
+//무엇을 보낼지 어떻게 보낼지
 @Getter
 @Setter
 @SuperBuilder

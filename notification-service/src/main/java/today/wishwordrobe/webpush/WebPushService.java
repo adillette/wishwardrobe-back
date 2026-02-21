@@ -1,9 +1,11 @@
 package today.wishwordrobe.webpush;
 
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import org.apache.http.HttpResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -15,49 +17,127 @@ import nl.martijndwars.webpush.Notification;
 import nl.martijndwars.webpush.PushService;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
+import today.wishwordrobe.infrastructure.WebPushSubscriptionRepository;
+import today.wishwordrobe.presentation.dto.WebPushSubscriptionDocument;
 
 @Service
 @Slf4j
 public class WebPushService {
 
+    public enum SendResult { SUCCESS, EXPIRED, FAILED }
     @Autowired
     private PushService pushService;
-    
+    @Autowired
+    private WebPushSubscriptionRepository webPushSubscriptionRepository;
+    private static final int MAX_DEVICES_PER_USER = 3;
+
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-    public Mono<Void> sendNotification(WebPushNotificationRequest request) {
-        return Mono.fromCallable(() -> {
-            WebPushSubscription subscription = request.getSubscription();
-            String payload = createPayload(request);
-
-            Notification notification = new Notification(
-                subscription.getEndpoint(),
-                subscription.getKeys().getP256dh(),
-                subscription.getKeys().getAuth(),
-                payload.getBytes(StandardCharsets.UTF_8)
-            );
-
-            var response = pushService.send(notification);
-            int status = response.getStatusLine().getStatusCode();
-            String body = null;
-            
-            if (response.getEntity() != null) {
-                body = org.apache.http.util.EntityUtils.toString(response.getEntity(), StandardCharsets.UTF_8);
-            }
-            
-            if (status < 200 || status >= 300) {
-                log.error("Web push failed: status={}, endpoint={}, body={}", status, subscription.getEndpoint(), body);
-                throw new WebPushSendException(subscription.getEndpoint(), status, body);
-            }
-            
-            log.info("WebPush sent successfully: endpoint={}, status={}", subscription.getEndpoint(), status);
-            
-            return null;
-        })
-        .subscribeOn(Schedulers.boundedElastic())
-        .then()
-        .doOnError(e -> log.error("Error sending web push notification", e));
+    public WebPushService(PushService pushService,
+            WebPushSubscriptionRepository webPushSubscriptionRepository) {
+        this.pushService = pushService;
+        this.webPushSubscriptionRepository = webPushSubscriptionRepository;
     }
+
+    public Mono<WebPushSubscriptionDocument> saveWebPushSubscription(String userId, WebPushSubscription subscription) {
+        String endpoint = subscription.getEndpoint();
+        //엔드 포인트를 구독의 고유 식별자로 사용
+        return webPushSubscriptionRepository.findById(endpoint)
+        //db에서 해당 endpoint 가 이미 존재하는지 조회
+                .flatMap(existing -> {
+                    //조회결과가 기존문서에 있을때만 실행되는데 existing = db에서 꺼낸 webpushsubscriptiondocument 객체
+                    existing.setUserId(userId);//구독자 userId 갱신
+                    existing.setLastUsedAt(LocalDateTime.now());//마지막 사용시간 갱신
+                    existing.setActive(true);//비활성화됐을 경우를 대비해서 다시 확성화
+                    log.info("webpush 재구독 갱신: userId={}, endpoint={}", userId, endpoint);
+                    return webPushSubscriptionRepository.save(existing);//수정된 기존 문서를 db에 저장
+                })
+                .switchIfEmpty(// 신규 구독
+                        enforceWebPushDeviceLimit(userId)
+                        //유저의 디바이스 등록 수 제한체크
+                        //초과시 mono가 error를 emit하거나 오래된 것을 제거한다.
+                                .then(Mono.defer(() -> {
+                                    //enforceWebPushDeviceLimit완료 후 실행 보장
+                                    //defer: 실제 구독 시점까지 내부 코드 생성을 지연시킴
+                                    //defer없으면 doc 객체가 limit 체크전에 만들어진다. 
+                                    WebPushSubscriptionDocument doc = WebPushSubscriptionDocument.from(subscription,
+                                            userId);
+                                    //subscription dto-> Mongodb 문서 객체로 변환
+                                    log.info("WebPush 신규 구독 저장: userId={}, endpoint={}", userId, endpoint);
+                                    return webPushSubscriptionRepository.save(doc);
+                                    //새문서 db 저장
+                                })))
+                .doOnSuccess(saved -> log.info("WebPush 구독 저장 완료: userId={}, endpoint={}", userId, endpoint));
+    }
+
+    private Mono<Void> enforceWebPushDeviceLimit(String userId) {
+        return webPushSubscriptionRepository
+                .findByUserIdAndIsActiveOrderByLastUsedAtAsc(userId, true)
+                .skip(MAX_DEVICES_PER_USER)
+                .flatMap(oldest -> {
+                    log.warn("WebPush 디바이스 제한 초과 - 삭제: userId={}, endpoint={}",
+                            userId, oldest.getEndpoint());
+                    return webPushSubscriptionRepository.delete(oldest);
+                })
+                .then();
+    }
+    // Document를 직접 받아서 410/404 내부에서 처리
+
+    public Mono<SendResult> sendNotification(WebPushSubscriptionDocument doc, WebPushNotificationRequest request) {
+        return Mono.<Integer>fromCallable(() -> {
+            Notification notification = new Notification(
+                    doc.getEndpoint(),
+                    doc.getP256dh(),
+                    doc.getAuth(),
+                    createPayload(request).getBytes(StandardCharsets.UTF_8));
+
+            HttpResponse response = pushService.send(notification);
+            return response.getStatusLine().getStatusCode();
+        })
+                .subscribeOn(Schedulers.boundedElastic())
+                .flatMap(status -> {
+                    if (status == 410 || status == 404) {
+                        log.warn("WebPush {} -만료 구독 삭제 : endpoing={}", status, doc.getEndpoint());
+                        return webPushSubscriptionRepository.deleteById(doc.getEndpoint())
+                        .thenReturn(SendResult.EXPIRED);
+                    }
+                    if (status >= 200 && status < 300) {
+                        log.debug("WebPush 전송 성공: status={}, endpoint={}", status, doc.getEndpoint());
+                        doc.setLastUsedAt(LocalDateTime.now());
+                        return webPushSubscriptionRepository.save(doc).thenReturn(SendResult.SUCCESS);
+                    }
+                    log.error("WebPush 전송 실패: status={}, endpoint={}", status, doc.getEndpoint());
+                    return Mono.error(new WebPushSendException(doc.getEndpoint(), status, null));
+
+                });
+
+    }
+
+
+    //구독 삭제 
+    public Mono<Void> deleteByEndpoint(String endpoint){
+        return webPushSubscriptionRepository.deleteById(endpoint)
+        .doOnSuccess(v->log.info("webPush 구독 해제: endpoint={}",endpoint));
+
+    }
+    //구독 전체 삭제
+    public Mono<Void> deleteByUserId(String userId){
+        return webPushSubscriptionRepository.deleteByUserId(userId)
+        .doOnSuccess(v->log.info("WebPush 구독 전체 삭제: userId={}",userId));
+    }
+
+    //7일 미사용 구독 정리
+    public Mono<Long> deleteInactiveSubscriptions(){
+        LocalDateTime threshod= LocalDateTime.now().minusDays(7);
+        return webPushSubscriptionRepository.findByLastUsedAtBeforeAndIsActive(threshod, true)
+        .flatMap(doc->webPushSubscriptionRepository.delete(doc).thenReturn(1L))
+        .reduce(0L,Long::sum)
+        .doOnSuccess(count->log.info("WebPush 만료 구독 {}건 삭제 완료", count));
+    }
+
+
+
+
 
     private String createPayload(WebPushNotificationRequest request) {
         Map<String, Object> payload = new LinkedHashMap<>();

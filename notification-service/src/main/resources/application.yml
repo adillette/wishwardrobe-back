@@ -10,10 +10,7 @@ spring:
       uri: mongodb://wish:wish123@localhost:27017/wishnotification?authSource=wishnotification
 
       auto-index-creation: true
-  cache:
-      type: caffeine
-      caffeine:
-        spec: maximumSize=10000,expireAfterWrite=30m
+  
     
   codec:
     max-in-memory-size: 16MB
@@ -48,11 +45,23 @@ notification:
     location-label: "서울(시청)"
     zone: Asia/Seoul
     mobile-topic: daily-weather
-    
-    click-action: "http://localhost:8083"  
+    default-user-id: 1  # ← 추천 이미지 가져올 대표 사용자
+    mobile-title: "오늘의 날씨"
+    web-title: "오늘의 날씨"
+    click-action: "http://localhost:8083"
 # Logging
 logging:
   level:
     today.wishwordrobe: DEBUG
     com.google.firebase: DEBUG
     org.springframework.web.reactive: DEBUG
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, metrics, prometheus
+  metrics:
+    export:
+      prometheus:
+        enabled: true
