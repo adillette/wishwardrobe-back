@@ -3,9 +3,11 @@ package today.wishwordrobe.firebase;
 import java.util.Map;
 
 import lombok.Data;
+import lombok.experimental.SuperBuilder;
 import today.wishwordrobe.presentation.dto.PushNotificationRequest;
 
 @Data
+@SuperBuilder
 public class FCMPushNotificationRequest extends PushNotificationRequest {
 
     private String topic;
@@ -13,7 +15,7 @@ public class FCMPushNotificationRequest extends PushNotificationRequest {
 
     public FCMPushNotificationRequest(String title, String message, String icon, String clickAction,
                                       Map<String, String> data, String url, String topic, String token) {
-        super(title, message, icon, clickAction, data, url,topic);
+        super(title, message, icon, clickAction, data, url, null);
         this.topic = topic;
         this.token = token;
     }

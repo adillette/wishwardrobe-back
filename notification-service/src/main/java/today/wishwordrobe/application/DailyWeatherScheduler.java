@@ -19,6 +19,7 @@ import today.wishwordrobe.presentation.dto.ClothesDto;
 import today.wishwordrobe.presentation.dto.PushNotificationRequest;
 import today.wishwordrobe.presentation.dto.WeatherForecastResponse;
 import today.wishwordrobe.webpush.BroadcastJobService;
+import today.wishwordrobe.webpush.WebPushService;
 
 @Component
 @Slf4j
@@ -37,6 +38,9 @@ public class DailyWeatherScheduler {
 
   @Autowired
   private PushNotificationService pushNotificationService;
+
+  @Autowired
+  private WebPushService webPushService;
 
   @Autowired
   private BroadcastJobService broadcastJobService;
@@ -195,5 +199,15 @@ public class DailyWeatherScheduler {
           return Mono.just((String) null);  // 실패 시 null로 fallback
         });
   }
+
+  @Scheduled(cron = "0 0 0 * * *") // 매일 오전 12시 (자정)
+    public void cleanupExpiredSubscriptions() {
+        log.info("[배치] WebPush 만료 구독 정리 시작");
+        webPushService.deleteInactiveSubscriptions()
+                .subscribe(
+                    count -> log.info("[배치] WebPush 만료 구독 {}건 삭제", count),
+                    e    -> log.error("[배치] WebPush 만료 구독 정리 실패", e)
+                );
+    }
 
 }

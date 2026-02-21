@@ -11,12 +11,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * FCM 토큰 저장 Document
- * - token을 @Id로 사용해 중복 방지
- * - userId로 "로그아웃 시 해당 사용자의 모든 토큰 삭제" 가능
- * - deviceId로 "같은 유저의 여러 디바이스" 구분
- */
+//DTO/도메인 객체와 DB 저장 객체를 분리하기 위한 Mongo 전용 모델
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -24,6 +19,7 @@ import lombok.NoArgsConstructor;
 @Document(collection = "fcm_tokens")
 public class FcmTokenDocument {
 
+   
     @Id
     private String token;  // FCM 토큰 자체가 PK (중복 방지)
 
@@ -36,4 +32,16 @@ public class FcmTokenDocument {
     private LocalDateTime createdAt = LocalDateTime.now();
 
     private LocalDateTime lastUsedAt;
+
+   
+
+    private boolean isActive;
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Keys {
+        private String p256dh;
+        private String auth;
+    }
 }

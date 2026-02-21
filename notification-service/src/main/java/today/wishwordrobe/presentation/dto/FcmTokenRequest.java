@@ -4,9 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * FCM 토큰 등록/삭제 요청 DTO
- */
+//토큰 관리용 dto 토큰 등록, 삭제,해제할때 사용 어디로 보낼지 저장
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
