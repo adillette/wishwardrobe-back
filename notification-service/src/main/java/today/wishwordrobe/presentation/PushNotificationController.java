@@ -45,7 +45,8 @@ public class PushNotificationController {
         log.info("--------------------");
         return Mono.just(publicKey);
     }
-    //웹푸시 구독 등
+
+    // 웹푸시 구독 등
     @PostMapping("/subscribe")
     public Mono<ResponseEntity<Void>> subscribe(@RequestBody Map<String, Object> subscription) {
         return pushNotificationService.saveSubscription(subscription)
@@ -89,15 +90,22 @@ public class PushNotificationController {
                 });
     }
 
+    // enqueue()가 jobId를 반환하는데 컨트롤러는 ResponseEntity를 반환해야하니까 map으로 감싼다.
     @PostMapping("/broadcast")
     public Mono<ResponseEntity<Map<String, Object>>> broadcast(@RequestBody PushNotificationRequest request) {
         return broadcastJobService.enqueue(request)
-                .map(jobId -> ResponseEntity.accepted().body(Map.of("jobId", jobId)));
+                .map(jobId -> ResponseEntity.accepted().<Map<String, Object>>body(Map.of("jobId", jobId)))
+                .onErrorResume(e -> {
+                    // // GeneralSecurityException, IOException, JoseException 전부 여기서 잡힘
+                    log.error("[Broadcast] 오류 발생: {}", e.getMessage());
+                    return Mono.just(ResponseEntity.internalServerError()
+                            .<Map<String, Object>>body(Map.of("error", e.getMessage())));
+                });
     }
 
     // 상태 조회
     @GetMapping("/jobs/{jobId}")
-    public Mono<ResponseEntity<JobView>> job(@PathVariable String jobId) {
+    public Mono<ResponseEntity<JobView>> job(@PathVariable("jobId") String jobId) {
         return broadcastJobService.get(jobId)
                 .map(ResponseEntity::ok)
                 .switchIfEmpty(Mono.just(ResponseEntity.notFound().build()));
@@ -123,7 +131,7 @@ public class PushNotificationController {
                 .then(Mono.just(ResponseEntity.ok("FCM token unregistered")));
     }
 
-    //특정 사용자의 모든 FCM 토큰 삭제 (전체 로그아웃)
+    // 특정 사용자의 모든 FCM 토큰 삭제 (전체 로그아웃)
     @PostMapping("/fcm/unregister-user")
     public Mono<ResponseEntity<String>> unregisterAllFcmTokens(@RequestBody Map<String, String> request) {
         String userId = request.get("userId");
@@ -134,5 +142,3 @@ public class PushNotificationController {
                 .then(Mono.just(ResponseEntity.ok("All FCM tokens unregistered for userId: " + userId)));
     }
 }
-
-

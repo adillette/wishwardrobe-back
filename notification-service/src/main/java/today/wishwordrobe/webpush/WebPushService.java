@@ -5,18 +5,17 @@ import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import org.apache.http.HttpResponse;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.asynchttpclient.AsyncHttpClient;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.extern.slf4j.Slf4j;
+import nl.martijndwars.webpush.Encoding;
 import nl.martijndwars.webpush.Notification;
-import nl.martijndwars.webpush.PushService;
+import nl.martijndwars.webpush.PushAsyncService;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 import today.wishwordrobe.infrastructure.WebPushSubscriptionRepository;
 import today.wishwordrobe.presentation.dto.WebPushSubscriptionDocument;
 
@@ -24,19 +23,27 @@ import today.wishwordrobe.presentation.dto.WebPushSubscriptionDocument;
 @Slf4j
 public class WebPushService {
 
+    private final AsyncHttpClient asyncHttpClient;
+
+    private final PushAsyncService pushAsyncService;
+
+    private final WebPushSubscriptionRepository webPushSubscriptionRepository;
+
     public enum SendResult { SUCCESS, EXPIRED, FAILED }
-    @Autowired
-    private PushService pushService;
-    @Autowired
-    private WebPushSubscriptionRepository webPushSubscriptionRepository;
+
     private static final int MAX_DEVICES_PER_USER = 3;
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-    public WebPushService(PushService pushService,
-            WebPushSubscriptionRepository webPushSubscriptionRepository) {
-        this.pushService = pushService;
+    public WebPushService(
+            WebPushSubscriptionRepository 
+            webPushSubscriptionRepository, 
+            PushAsyncService pushAsyncService, 
+            AsyncHttpClient asyncHttpClient) {
+        
         this.webPushSubscriptionRepository = webPushSubscriptionRepository;
+        this.pushAsyncService = pushAsyncService;
+        this.asyncHttpClient = asyncHttpClient;
     }
 
     public Mono<WebPushSubscriptionDocument> saveWebPushSubscription(String userId, WebPushSubscription subscription) {
@@ -82,36 +89,61 @@ public class WebPushService {
                 .then();
     }
     // Document를 직접 받아서 410/404 내부에서 처리
+    //preparePost: 알림 내용을 Http요청 형태로 변환
+    //asyncHttpClient.executeRequest: 실제 Http 요청전송
+    //toCompletableFuture: mono로 변환하려고
+    /* Lombok @Builder - 우리가 만든 것
+FCMPushNotificationRequest.builder()
+    .token("abc")
+    .build(); // // FCMPushNotificationRequest 완성
 
-    public Mono<SendResult> sendNotification(WebPushSubscriptionDocument doc, WebPushNotificationRequest request) {
-        return Mono.<Integer>fromCallable(() -> {
-            Notification notification = new Notification(
-                    doc.getEndpoint(),
-                    doc.getP256dh(),
-                    doc.getAuth(),
-                    createPayload(request).getBytes(StandardCharsets.UTF_8));
+// // BoundRequestBuilder - 라이브러리가 만든 것
+pushAsyncService.preparePost(notification, Encoding.AES128GCM)
+// // 이미 BoundRequestBuilder 상태로 반환됨 - .builder() 호출 없음
+    .build(); // // Request 완성
+*/
+   public Mono<SendResult> sendNotification(WebPushSubscriptionDocument doc, 
+WebPushNotificationRequest request) {
 
-            HttpResponse response = pushService.send(notification);
-            return response.getStatusLine().getStatusCode();
-        })
-                .subscribeOn(Schedulers.boundedElastic())
-                .flatMap(status -> {
-                    if (status == 410 || status == 404) {
-                        log.warn("WebPush {} -만료 구독 삭제 : endpoing={}", status, doc.getEndpoint());
-                        return webPushSubscriptionRepository.deleteById(doc.getEndpoint())
-                        .thenReturn(SendResult.EXPIRED);
-                    }
-                    if (status >= 200 && status < 300) {
-                        log.debug("WebPush 전송 성공: status={}, endpoint={}", status, doc.getEndpoint());
-                        doc.setLastUsedAt(LocalDateTime.now());
-                        return webPushSubscriptionRepository.save(doc).thenReturn(SendResult.SUCCESS);
-                    }
-                    log.error("WebPush 전송 실패: status={}, endpoint={}", status, doc.getEndpoint());
-                    return Mono.error(new WebPushSendException(doc.getEndpoint(), status, null));
+    
 
-                });
-
-    }
+    return Mono.fromCallable(() ->new Notification(
+            doc.getEndpoint(),
+            doc.getP256dh(),
+            doc.getAuth(),
+            createPayload(request).getBytes(StandardCharsets.UTF_8)))
+        // ↑ NoSuchAlgorithmException → 자동으로 Mono.error()로 변환
+            .flatMap(notification -> 
+                Mono.fromCallable(()->
+            pushAsyncService.preparePost(notification, Encoding.AES128GCM).build())
+            )
+            // ↑ JoseException, GeneralSecurityException 등도 자동 변환
+            // // checked exception → 자동으로 Mono.error()로 변환
+            
+            .flatMap(post -> Mono.fromFuture(
+                asyncHttpClient.executeRequest(post).toCompletableFuture()
+            ))
+            .map(response -> response.getStatusCode())
+            .flatMap(status -> {
+                if (status == 410 || status == 404) {
+                    log.warn("WebPush {} - 만료 구독 삭제: endpoint={}", status, 
+                    doc.getEndpoint());
+                    return webPushSubscriptionRepository.deleteById(doc.getEndpoint())
+                            .thenReturn(SendResult.EXPIRED);
+                }
+                if (status >= 200 && status < 300) {
+                    log.debug("WebPush 전송 성공: status={}, endpoint={}", status, 
+                    doc.getEndpoint());
+                    doc.setLastUsedAt(LocalDateTime.now());
+                    return webPushSubscriptionRepository.save(doc).thenReturn(
+                    SendResult.SUCCESS);
+                }
+                log.error("WebPush 전송 실패: status={}, endpoint={}", status, 
+                doc.getEndpoint());
+                return Mono.error(new WebPushSendException(doc.getEndpoint(), 
+                status, null));
+            });
+}
 
 
     //구독 삭제 
