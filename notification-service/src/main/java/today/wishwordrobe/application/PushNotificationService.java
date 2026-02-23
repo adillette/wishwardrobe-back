@@ -4,14 +4,15 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
@@ -31,37 +32,58 @@ import today.wishwordrobe.webpush.WebPushSubscription;
 @Slf4j
 public class PushNotificationService {
 
-    @Autowired
-    private WebPushSubscriptionRepository webPushSubscriptionRepository;
+    private final MeterRegistry meterRegistry;
+    private final FCMService fcmService;
+    private final FcmTokenRepository fcmTokenRepository;
+    private final WebPushSubscriptionRepository webPushSubscriptionRepository;
+    private final WebPushService webPushService;
+    private final AtomicLong inFlightMessages = new AtomicLong(0);
+    // inFlight: 지금 이순간 처리중인 브로드캐스트 수
+    private Counter successCounter;
+    private Counter failedCounter;
+    private Counter attemptCounter;
+    // latency 측정을 위한 timer
+    private Timer broadcastTimer;
 
-    @Autowired
-    private FcmTokenRepository fcmTokenRepository;
-
-    @Autowired
-    private FCMService fcmService;
-    @Autowired
-    private WebPushService webPushService;
-
-    @Autowired
-    private MeterRegistry meterRegistry;
-
-    private final AtomicLong inFlight = new AtomicLong(0);
-      //inFlight: 지금 이순간 처리중인 브로드캐스트 수
-      
     @PostConstruct
-    public void initMetrics(){
-        Gauge.builder("broadcast_inflight",inFlight,AtomicLong::get)
-        
-        .register(meterRegistry);
+    public void initMetrics() {
+
+        // // 서비스 시작 시점에 등록 → JMeter 요청 전에도 Prometheus에 나타남
+        this.successCounter = Counter.builder("broadcast_success_total")
+                .description("브로드캐스트 성공 건수")
+                .register(meterRegistry);
+
+        this.failedCounter = Counter.builder("broadcast_failed_total")
+                .description("브로드캐스트 실패 건수")
+                .register(meterRegistry);
+
+        this.attemptCounter = Counter.builder("broadcast_attempt_total")
+                .description("브로드캐스트 시도 건수 (성공+실패)")
+                .register(meterRegistry);
+
+        Gauge.builder("broadcast_inflight_messages", inFlightMessages, AtomicLong::get)
+                .description("현재 처리 중인 메시지 수")
+                .register(meterRegistry);
+
+        this.broadcastTimer = Timer.builder("broadcast_message_duration")
+                .description("FCM 메시지 처리 시간")
+                .publishPercentileHistogram() // // 이거 없으면 P95 못 뽑음
+                .publishPercentiles(0.5, 0.95, 0.99) // // P50, P95, P99
+                .register(meterRegistry);
+
     }
 
-    public PushNotificationService(FCMService fcmService, WebPushService webPushService,
+    public PushNotificationService(
+            MeterRegistry meterRegistry,
+            FCMService fcmService,
+            FcmTokenRepository fcmTokenRepository,
             WebPushSubscriptionRepository webPushSubscriptionRepository,
-            FcmTokenRepository fcmTokenRepository) {
+            WebPushService webPushService) {
+        this.meterRegistry = meterRegistry;
         this.fcmService = fcmService;
-        this.webPushService = webPushService;
-        this.webPushSubscriptionRepository = webPushSubscriptionRepository;
         this.fcmTokenRepository = fcmTokenRepository;
+        this.webPushSubscriptionRepository = webPushSubscriptionRepository;
+        this.webPushService = webPushService;
     }
 
     public record BroadcastStats(long total, long success, long failed, long gone410) {
@@ -78,11 +100,7 @@ public class PushNotificationService {
         AtomicLong fcmSuccess = new AtomicLong();
         AtomicLong fcmFailed = new AtomicLong();
 
-        Counter successCounter = meterRegistry.counter("broadcast_success_total");
-        Counter failedCounter = meterRegistry.counter("broadcast_failed_total");
-        
-
-
+      
         // WebPush 브로드캐스트
         Mono<Void> webPushBroadcast = webPushSubscriptionRepository.findByIsActive(true)
                 .flatMap(doc -> {
@@ -96,6 +114,8 @@ public class PushNotificationService {
                             .url(request.getUrl())
                             .image(request.getImage())
                             .build();
+                  
+
                     return webPushService.sendNotification(doc, webRequest)
                             .doOnSuccess(result -> {
                                 successCounter.increment();
@@ -114,19 +134,39 @@ public class PushNotificationService {
 
         // FCM 브로드캐스트
         Mono<Void> fcmBroadcast = fcmTokenRepository.findByIsActive(true)
+
+                .doOnNext(doc -> {
+                    fcmTotal.incrementAndGet();
+                    log.info("FCM token found: {}", doc.getUserId());
+                })
                 .flatMap(tokenDoc -> {
-                    fcmTotal.incrementAndGet(); // ← count() 제거, 실제 발송 대상만 카운트
+                    long current = inFlightMessages.incrementAndGet();
+                    log.info("[FCM] inflight +1 → 현재 처리 중: {}, token: {}", current, tokenDoc.getToken());
+
+                    // inFlightMessages.incrementAndGet();
+
                     FCMPushNotificationRequest fcmRequest = FCMPushNotificationRequest.builder()
                             .token(tokenDoc.getToken())
                             .title(request.getTitle())
                             .message(request.getMessage())
                             .build();
+
+                    long startTime = System.currentTimeMillis(); // // 시작 시간 기록
+
                     return fcmService.sendTokenMessage(fcmRequest)
+                            .doFinally(signal -> {
+                                long duration = System.currentTimeMillis() - startTime;
+                                broadcastTimer.record(duration, TimeUnit.MILLISECONDS); // // 처리 시간 기록
+                                inFlightMessages.decrementAndGet();
+                                log.info("[FCM] inflight -1, duration={}ms, signal={}", duration, signal);
+                            })
                             .doOnSuccess(id -> { // ← 중괄호 추가
+                                attemptCounter.increment();
                                 successCounter.increment();
                                 fcmSuccess.incrementAndGet();
                             })
                             .onErrorResume(e -> {
+                                attemptCounter.increment();
                                 failedCounter.increment();
                                 fcmFailed.incrementAndGet();
                                 return Mono.<String>empty();
@@ -135,8 +175,17 @@ public class PushNotificationService {
                 .then();
 
         // 둘 다 병렬 실행 후 통합 통계 반환
-        return Mono.when(webPushBroadcast, fcmBroadcast).thenReturn(new BroadcastStats(wpTotal.get() + fcmTotal.get(),
-                wpSuccess.get() + fcmSuccess.get(), wpFailed.get() + fcmFailed.get(), wpGone410.get()));
+        return Mono.zip(
+                webPushBroadcast.thenReturn(0),
+                fcmBroadcast.thenReturn(0))
+                .thenReturn(new BroadcastStats(
+                        wpTotal.get() + fcmTotal.get(),
+                        wpSuccess.get() + fcmSuccess.get(),
+                        wpFailed.get() + fcmFailed.get(),
+                        wpGone410.get()))
+                .doOnSuccess(stats -> log.info(
+                        "BroadcastStats: total={}, success={}, failed={}",
+                        stats.total(), stats.success(), stats.failed()));
     }
 
     public Mono<Void> saveSubscription(Map<String, Object> subscriptionMap) {

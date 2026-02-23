@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -34,8 +35,9 @@ public class FcmTokenDocument {
     private LocalDateTime lastUsedAt;
 
    
-
-    private boolean isActive;
+    @Field("isActive")
+    @Builder.Default
+    private Boolean isActive=true;
     @Data
     @Builder
     @NoArgsConstructor

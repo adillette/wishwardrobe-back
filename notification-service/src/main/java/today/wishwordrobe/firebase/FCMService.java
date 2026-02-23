@@ -2,6 +2,7 @@ package today.wishwordrobe.firebase;
 
 import com.google.firebase.messaging.*;
 
+import io.netty.handler.timeout.TimeoutException;
 import lombok.extern.slf4j.Slf4j;
 
 import org.slf4j.Logger;
@@ -17,6 +18,7 @@ import today.wishwordrobe.presentation.dto.FcmTokenDocument;
 import today.wishwordrobe.presentation.dto.FcmTokenRequest;
 
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.time.Duration;
 import java.time.LocalDateTime;
 
@@ -80,7 +82,11 @@ public class FCMService {
                 )
                 .onErrorResume(ExecutionException.class, e ->
                     handleExecutionException(request.getToken(), e)
-                );
+                )
+                .onErrorResume(TimeoutException.class,e->{
+                    log.warn("FCM SDK 타임아웃 token={}",request.getToken());
+                    return Mono.error(e);
+                });
     }
 
     private Message prepareMessage(FCMPushNotificationRequest request) {
@@ -121,8 +127,10 @@ public class FCMService {
                 .build();
     }
 
-    private String sendAndGetResponse(Message message) throws InterruptedException, ExecutionException {
-        return FirebaseMessaging.getInstance().sendAsync(message).get();
+    private String sendAndGetResponse(Message message) throws InterruptedException, ExecutionException,java.util.concurrent.TimeoutException {
+        return FirebaseMessaging.getInstance()
+        .sendAsync(message)
+        .get(5,TimeUnit.SECONDS);
     }
 
     // ================================================================
@@ -137,7 +145,7 @@ public class FCMService {
         return fcmtokenRepository.findByToken(request.getToken())
                 .flatMap(existing -> {
                     existing.setLastUsedAt(LocalDateTime.now());
-                    existing.setActive(true);
+                    existing.setIsActive(true);
                     log.info("기존 FCM 토큰 재활성화 - userId: {}", request.getUserId());
                     return fcmtokenRepository.save(existing);
                 })

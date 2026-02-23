@@ -61,7 +61,10 @@ management:
     web:
       exposure:
         include: health, metrics, prometheus
-  metrics:
-    export:
-      prometheus:
+      base-path: /actuator
+  server:
+    port: 9091
+  prometheus:
+    metrics:
+      export:
         enabled: true
