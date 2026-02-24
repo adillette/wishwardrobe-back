@@ -1,5 +1,6 @@
 package today.wishwordrobe.application;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -154,7 +155,8 @@ public class PushNotificationService {
                     long startTime = System.currentTimeMillis(); // // 시작 시간 기록
 
                     return fcmService.sendTokenMessage(fcmRequest)
-                            .doFinally(signal -> {
+                        .timeout(Duration.ofSeconds(5))        
+                        .doFinally(signal -> {
                                 long duration = System.currentTimeMillis() - startTime;
                                 broadcastTimer.record(duration, TimeUnit.MILLISECONDS); // // 처리 시간 기록
                                 inFlightMessages.decrementAndGet();
