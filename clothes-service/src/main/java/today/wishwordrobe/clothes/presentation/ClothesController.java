@@ -21,17 +21,7 @@ public class ClothesController{//아래 setter 바꿔야한다
         this.clothesService = clothesService;
     }
 
-    /*
-     ★★ 특정 사용자 옷 전체 조회 ★★★
-     옷장(Wardrobe) 목록 표시용
-     */
-    @GetMapping("/user/{userId}")
-    public ResponseEntity<List<Clothes>> getClothesByUserId(@PathVariable("userId") Long userId) {
-        log.info("옷 전체 조회 요청: userId={}", userId);
-        List<Clothes> clothes = clothesService.getClothesByUserId(userId);
-        return ResponseEntity.ok(clothes);
-    }
-
+  
     /*
      ★★ 추천★★★ - MSA 방식으로 변경
      위치 정보를 받아서 Weather Service에서 날씨를 조회한 후 옷 추천
