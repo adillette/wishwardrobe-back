@@ -43,6 +43,10 @@ public class WebPushInitializer {
                 .setConnectTimeout(Duration.ofSeconds(3))
                 .setRequestTimeout(Duration.ofSeconds(5))
                 .setReadTimeout(Duration.ofSeconds(5))
+                // .setMaxConnections(2000)//thread 200× concurrency 10
+                // .setMaxConnectionsPerHost(1000)
+                .setPooledConnectionIdleTimeout(Duration.ofSeconds(60))
+                // .setKeepAlive(true)//연결 재사용
                 .build()
             );
         

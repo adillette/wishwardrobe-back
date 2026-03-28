@@ -7,12 +7,14 @@ import java.util.concurrent.ConcurrentMap;
 
 import org.springframework.stereotype.Service;
 
+import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import today.wishwordrobe.application.PushNotificationService;
 import today.wishwordrobe.presentation.dto.PushNotificationRequest;
 
 @Service
+@Slf4j
 public class BroadcastJobService {
   public enum Status{RUNNING, DONE, FAILED};
 
@@ -50,7 +52,7 @@ public class BroadcastJobService {
     jobs.put(jobId, state);
 
      pushNotificationService.broadcastAllFromDbWithStats(request)
-        .publishOn(Schedulers.boundedElastic()) // job 실행을 요청 쓰레드와 분리
+        
         .doOnSuccess(stats -> {
           state.total = stats.total();
           state.success = stats.success();
@@ -64,7 +66,8 @@ public class BroadcastJobService {
           state.error = e.getMessage();
           state.finishedAt = Instant.now();
         })
-        .subscribe(); // “비동기 실행”의 핵심
+        .subscribe(  
+          null, error -> log.error("broadcast failed jobId={}", jobId, error)); // “비동기 실행”의 핵심
 
     return Mono.just(jobId);
   }

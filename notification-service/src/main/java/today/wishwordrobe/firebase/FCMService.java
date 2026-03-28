@@ -1,5 +1,10 @@
 package today.wishwordrobe.firebase;
 
+
+import com.google.api.core.ApiFuture;
+import com.google.api.core.ApiFutureCallback;
+import com.google.api.core.ApiFutures;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.firebase.messaging.*;
 
 import io.netty.handler.timeout.TimeoutException;
@@ -33,15 +38,13 @@ public class FCMService {
     private static final int MAX_DEVICES_PER_USER = 3;
 
     public Mono<String> sendPushNotification(FCMPushNotificationRequest request) {
-        return Mono.fromCallable(() -> {
             Message message = prepareMessage(request);
-            return sendAndGetResponse(message);
-        })
-                .subscribeOn(Schedulers.boundedElastic());
+            return sendAsync(message);
     }
 
     public Mono<String> sendTopicMessage(FCMPushNotificationRequest request) {
-        return Mono.fromCallable(() -> {
+        
+            long start = System.currentTimeMillis();
             Message.Builder builder = Message.builder()
                     .setNotification(Notification.builder()
                             .setTitle(request.getTitle())
@@ -54,14 +57,15 @@ public class FCMService {
             }
 
             Message message = builder.build();
-            return sendAndGetResponse(message);
-        })
-                .subscribeOn(Schedulers.boundedElastic());
+            return sendAsync(message)
+                    .doOnSuccess(result->{
+                        long elapsed= System.currentTimeMillis()-start;
+                    });
+                
     }
 
     public Mono<String> sendTokenMessage(FCMPushNotificationRequest request) {
-        return Mono.fromCallable(() -> {
-            Message.Builder builder = Message.builder()
+               Message.Builder builder = Message.builder()
                     .setNotification(Notification.builder()
                             .setTitle(request.getTitle())
                             .setBody(request.getMessage())
@@ -73,15 +77,13 @@ public class FCMService {
             }
 
             Message message = builder.build();
-            return sendAndGetResponse(message);
-        })
-                .subscribeOn(Schedulers.boundedElastic())
+            return sendAsync(message)             
                 .flatMap(response ->
                     // 전송 성공 시 lastUsedAt 업데이트
                     updateLastUsedAt(request.getToken()).thenReturn(response)
                 )
                 .onErrorResume(ExecutionException.class, e ->
-                    handleExecutionException(request.getToken(), e)
+                handleExecutionException(request.getToken(), e)
                 )
                 .onErrorResume(TimeoutException.class,e->{
                     log.warn("FCM SDK 타임아웃 token={}",request.getToken());
@@ -127,11 +129,21 @@ public class FCMService {
                 .build();
     }
 
-    private String sendAndGetResponse(Message message) throws InterruptedException, ExecutionException,java.util.concurrent.TimeoutException {
-        return FirebaseMessaging.getInstance()
-        .sendAsync(message)
-        .get(5,TimeUnit.SECONDS);
-    }
+    private Mono<String> sendAsync(Message message) {
+    return Mono.create(sink -> {
+        ApiFuture<String> apiFuture = FirebaseMessaging.getInstance().sendAsync(message);
+        ApiFutures.addCallback(apiFuture, new ApiFutureCallback<String>() {
+            @Override
+            public void onSuccess(String result) {
+                sink.success(result);
+            }
+            @Override
+            public void onFailure(Throwable t) {
+                sink.error(t);
+            }
+        }, MoreExecutors.directExecutor());
+    });
+}
 
     // ================================================================
     // 구독 Lifecycle 관리
@@ -146,7 +158,7 @@ public class FCMService {
                 .flatMap(existing -> {
                     existing.setLastUsedAt(LocalDateTime.now());
                     existing.setIsActive(true);
-                    log.info("기존 FCM 토큰 재활성화 - userId: {}", request.getUserId());
+                    // log.info("기존 FCM 토큰 재활성화 - userId: {}", request.getUserId());
                     return fcmtokenRepository.save(existing);
                 })
                 .switchIfEmpty(Mono.defer(() -> {
@@ -158,7 +170,7 @@ public class FCMService {
                             .lastUsedAt(LocalDateTime.now())
                             .isActive(true)
                             .build();
-                    log.info("새 FCM 토큰 생성 - userId: {}", request.getUserId());
+                    // log.info("새 FCM 토큰 생성 - userId: {}", request.getUserId());
                     return fcmtokenRepository.save(token);
                 }))
                 .flatMap(saved ->

@@ -2,10 +2,13 @@ package today.wishwordrobe.firebase;
 
 import java.util.Map;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 import today.wishwordrobe.presentation.dto.PushNotificationRequest;
 
+@NoArgsConstructor
 @Data
 @SuperBuilder
 public class FCMPushNotificationRequest extends PushNotificationRequest {

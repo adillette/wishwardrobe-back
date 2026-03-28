@@ -43,6 +43,7 @@ public class PushNotificationService {
     private Counter successCounter;
     private Counter failedCounter;
     private Counter attemptCounter;
+    private Counter requestCounter;
     // latency 측정을 위한 timer
     private Timer broadcastTimer;
 
@@ -62,9 +63,15 @@ public class PushNotificationService {
                 .description("브로드캐스트 시도 건수 (성공+실패)")
                 .register(meterRegistry);
 
+        this.requestCounter = Counter.builder("broadcast_request_total")
+        .description("브로드캐스트 요청 수")
+        .register(meterRegistry);
+
+
         Gauge.builder("broadcast_inflight_messages", inFlightMessages, AtomicLong::get)
                 .description("현재 처리 중인 메시지 수")
                 .register(meterRegistry);
+        
 
         this.broadcastTimer = Timer.builder("broadcast_message_duration")
                 .description("FCM 메시지 처리 시간")
@@ -91,7 +98,7 @@ public class PushNotificationService {
     }
 
     public Mono<BroadcastStats> broadcastAllFromDbWithStats(PushNotificationRequest request) {
-        int concurrency = 50;
+        //int concurrency = 30;
         AtomicLong wpTotal = new AtomicLong(0);
         AtomicLong wpSuccess = new AtomicLong(0);
         AtomicLong wpFailed = new AtomicLong(0);
@@ -100,12 +107,18 @@ public class PushNotificationService {
         AtomicLong fcmTotal = new AtomicLong();
         AtomicLong fcmSuccess = new AtomicLong();
         AtomicLong fcmFailed = new AtomicLong();
-
-      
+        requestCounter.increment();
         // WebPush 브로드캐스트
         Mono<Void> webPushBroadcast = webPushSubscriptionRepository.findByIsActive(true)
+                
+                .onErrorResume(e -> {
+                    log.error("WebPush 조회 timeout:{}", e.getMessage());
+                    return Mono.empty();
+                })
+
                 .flatMap(doc -> {
                     wpTotal.incrementAndGet(); // ← 실제 발송 대상만 카운트
+                    
                     WebPushNotificationRequest webRequest = WebPushNotificationRequest.builder()
                             .title(request.getTitle())
                             .message(request.getMessage())
@@ -115,34 +128,41 @@ public class PushNotificationService {
                             .url(request.getUrl())
                             .image(request.getImage())
                             .build();
-                  
 
                     return webPushService.sendNotification(doc, webRequest)
+                    .timeout(Duration.ofSeconds(5))
                             .doOnSuccess(result -> {
                                 successCounter.increment();
+                                attemptCounter.increment();  
                                 if (result == SendResult.SUCCESS)
                                     wpSuccess.incrementAndGet();
                                 if (result == SendResult.EXPIRED)
                                     wpGone410.incrementAndGet();
                             })
                             .onErrorResume(e -> {
+                                log.error("웹푸시로 보낼때 에러", e);
                                 failedCounter.increment();
                                 wpFailed.incrementAndGet();
+                                attemptCounter.increment();  
                                 return Mono.<SendResult>empty(); // 타입 명시
                             });
-                }, concurrency)
+                }, 30)
                 .then();
 
         // FCM 브로드캐스트
         Mono<Void> fcmBroadcast = fcmTokenRepository.findByIsActive(true)
-
+                
+                .onErrorResume(e -> { // ← timeout 에러 처리
+                     log.error("FCM 토큰 조회 timeout: {}", e.getMessage());
+                    return Mono.empty();
+                })
                 .doOnNext(doc -> {
                     fcmTotal.incrementAndGet();
-                    log.info("FCM token found: {}", doc.getUserId());
+                    // log.info("FCM token found: {}", doc.getUserId());
                 })
                 .flatMap(tokenDoc -> {
                     long current = inFlightMessages.incrementAndGet();
-                    log.info("[FCM] inflight +1 → 현재 처리 중: {}, token: {}", current, tokenDoc.getToken());
+                    // log.info("[FCM] inflight +1 → 현재 처리 중: {}, token: {}", current, tokenDoc.getToken());
 
                     // inFlightMessages.incrementAndGet();
 
@@ -155,32 +175,34 @@ public class PushNotificationService {
                     long startTime = System.currentTimeMillis(); // // 시작 시간 기록
 
                     return fcmService.sendTokenMessage(fcmRequest)
-                        .timeout(Duration.ofSeconds(5))        
-                        .doFinally(signal -> {
+                            .timeout(Duration.ofSeconds(5))
+                            .doFinally(signal -> {
                                 long duration = System.currentTimeMillis() - startTime;
-                                broadcastTimer.record(duration, TimeUnit.MILLISECONDS); // // 처리 시간 기록
+                                broadcastTimer.record(duration, TimeUnit.MILLISECONDS); //  처리 시간 기록
                                 inFlightMessages.decrementAndGet();
-                                log.info("[FCM] inflight -1, duration={}ms, signal={}", duration, signal);
+                                // log.info("[FCM] inflight -1, duration={}ms, signal={}", duration, signal);
                             })
-                            .doOnSuccess(id -> { // ← 중괄호 추가
+                            .doOnSuccess(id -> { 
                                 attemptCounter.increment();
                                 successCounter.increment();
                                 fcmSuccess.incrementAndGet();
                             })
                             .onErrorResume(e -> {
+                                log.error("fcm으로 토큰이랑 보낼때 에러", e);
                                 attemptCounter.increment();
                                 failedCounter.increment();
                                 fcmFailed.incrementAndGet();
                                 return Mono.<String>empty();
                             });
-                }, concurrency)
+                }, 30)
+                
                 .then();
 
         // 둘 다 병렬 실행 후 통합 통계 반환
         return Mono.zip(
                 webPushBroadcast.thenReturn(0),
                 fcmBroadcast.thenReturn(0))
-                .thenReturn(new BroadcastStats(
+                .map(ignored-> new BroadcastStats(
                         wpTotal.get() + fcmTotal.get(),
                         wpSuccess.get() + fcmSuccess.get(),
                         wpFailed.get() + fcmFailed.get(),
@@ -252,12 +274,18 @@ public class PushNotificationService {
 
             // 토큰 확인
             if (fcmRequest.getToken() != null) {
+                long start=System.currentTimeMillis() ;// 시작;
                 tasks.add(fcmService.sendTokenMessage(fcmRequest)
                         .doOnSuccess(messageId -> {
+                            long elapsed=System.currentTimeMillis()-start;// 종료
+                             log.info("[FCM 단건 응답시간] {}ms", elapsed); // 로그
                             results.put("fcmResult", "success");
                             results.put("fcmMessageId", messageId);
                         })
                         .onErrorResume(e -> {
+                             long elapsed = System.currentTimeMillis() - start;
+                            log.error("[FCM 단건 응답시간 - 실패] {}ms", elapsed);
+                            log.error("fcmResult 에러", e);
                             results.put("fcmError", e.getMessage());
                             return Mono.empty();
                         }));
@@ -270,6 +298,7 @@ public class PushNotificationService {
                             results.put("topicMessageId", messageId);
                         })
                         .onErrorResume(e -> {
+                            log.error("topicResult 에러", e);
                             results.put("topicError", e.getMessage());
                             return Mono.empty();
                         }));
