@@ -7,11 +7,11 @@ spring:
 
   data:
     mongodb:
-      uri: mongodb://wish:wish123@localhost:27017/wishnotification?authSource=wishnotification
 
+      uri: ${MONGODB_URI_NOTIFICATION}
+      #  uri: mongodb://wish:wish123@localhost:27017/wishnotification?authSource=wishnotification&maxPoolSize=1000&minPoolSize=100&maxWaitTime=5000&socketTimeout=10000&connectTimeout=5000
       auto-index-creation: true
   
-    
   codec:
     max-in-memory-size: 16MB
 
@@ -24,8 +24,8 @@ firebase:
 
 # Web Push Configuration
 webpush:
-  public-key: BHy2SrmleeiRQ7SXuDAcSQE2-t5G1hr2vU8MfR9TTWl3wpu--yiGiR9ak-ad0ASSlgseJG3BrHbd1CBsLriWa5s
-  private-key: huVJXf_XYE4xag1unkHTXTQK7-Clx0UAO0N77myaASA
+  public-key: ${WEBPUSH_PUBLIC_KEY}
+  private-key: ${WEBPUSH_PRIVATE_KEY}
   subject: mailto:wishful@gmail.com
 
 # clothes Service 연동 추가
@@ -68,3 +68,9 @@ management:
     metrics:
       export:
         enabled: true
+      # enable: 
+      #   jvm: false
+      #   system: false
+      #   process: false 
+      #   executor: false
+      #   logback: false

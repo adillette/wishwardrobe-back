@@ -31,9 +31,7 @@ spring:
           hibernate:
             dialect: org.hibernate.dialect.H2Dialect
     
-  services:
-    weather:
-      url: http://localhost:0
+ 
 
   # jpa:
   #   defer-datasource-initialization: true
@@ -50,7 +48,9 @@ spring:
     caffeine:
       spec: maximumSize=10000,expireAfterWrite=30m
 
-  
+services:
+  weather:
+    url: http://localhost:8082/api/v1  
 
 # File Upload Configuration
 file:
