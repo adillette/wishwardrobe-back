@@ -1,0 +1,454 @@
+{
+	"info": {
+		"_postman_id": "weather-service-test-2024",
+		"name": "Weather Service API Tests",
+		"description": "기상청 API 연동 테스트 및 위경도 좌표 변환 테스트",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "1. 기상청 API 직접 테스트",
+			"item": [
+				{
+					"name": "1-1. 초단기실황 조회 (Raw API)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtNcst?serviceKey=dJ+1bX3L4D5nk3DlGR7hHcEexw5lZK9kOiQYE3SUIEmLH7O/Hd/7TBDEWzgPvqQJbYyWJpgLjR67KsK59dX3ow==&numOfRows=10&pageNo=1&dataType=JSON&base_date={{currentDate}}&base_time={{currentTime}}&nx=60&ny=127",
+							"protocol": "http",
+							"host": [
+								"apis",
+								"data",
+								"go",
+								"kr"
+							],
+							"path": [
+								"1360000",
+								"VilageFcstInfoService_2.0",
+								"getUltraSrtNcst"
+							],
+							"query": [
+								{
+									"key": "serviceKey",
+									"value": "dJ+1bX3L4D5nk3DlGR7hHcEexw5lZK9kOiQYE3SUIEmLH7O/Hd/7TBDEWzgPvqQJbYyWJpgLjR67KsK59dX3ow==",
+									"description": "API 인증키"
+								},
+								{
+									"key": "numOfRows",
+									"value": "10",
+									"description": "한 페이지 결과 수"
+								},
+								{
+									"key": "pageNo",
+									"value": "1",
+									"description": "페이지 번호"
+								},
+								{
+									"key": "dataType",
+									"value": "JSON",
+									"description": "응답 자료 형식"
+								},
+								{
+									"key": "base_date",
+									"value": "{{currentDate}}",
+									"description": "발표일자 (YYYYMMDD)"
+								},
+								{
+									"key": "base_time",
+									"value": "{{currentTime}}",
+									"description": "발표시각 (HHMM)"
+								},
+								{
+									"key": "nx",
+									"value": "60",
+									"description": "예보지점 X 좌표 (서울 시청: 60)"
+								},
+								{
+									"key": "ny",
+									"value": "127",
+									"description": "예보지점 Y 좌표 (서울 시청: 127)"
+								}
+							]
+						},
+						"description": "기상청 초단기실황 API 직접 호출 테스트\n- 서울 시청 좌표 (nx=60, ny=127) 사용\n- 현재 시각 기준 날씨 정보"
+					},
+					"response": []
+				},
+				{
+					"name": "1-2. 단기예보 조회 (Raw API)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?serviceKey=dJ+1bX3L4D5nk3DlGR7hHcEexw5lZK9kOiQYE3SUIEmLH7O/Hd/7TBDEWzgPvqQJbYyWJpgLjR67KsK59dX3ow==&numOfRows=100&pageNo=1&dataType=JSON&base_date={{currentDate}}&base_time=0500&nx=60&ny=127",
+							"protocol": "http",
+							"host": [
+								"apis",
+								"data",
+								"go",
+								"kr"
+							],
+							"path": [
+								"1360000",
+								"VilageFcstInfoService_2.0",
+								"getVilageFcst"
+							],
+							"query": [
+								{
+									"key": "serviceKey",
+									"value": "dJ+1bX3L4D5nk3DlGR7hHcEexw5lZK9kOiQYE3SUIEmLH7O/Hd/7TBDEWzgPvqQJbYyWJpgLjR67KsK59dX3ow==",
+									"description": "API 인증키"
+								},
+								{
+									"key": "numOfRows",
+									"value": "100",
+									"description": "한 페이지 결과 수"
+								},
+								{
+									"key": "pageNo",
+									"value": "1",
+									"description": "페이지 번호"
+								},
+								{
+									"key": "dataType",
+									"value": "JSON",
+									"description": "응답 자료 형식"
+								},
+								{
+									"key": "base_date",
+									"value": "{{currentDate}}",
+									"description": "발표일자 (YYYYMMDD)"
+								},
+								{
+									"key": "base_time",
+									"value": "0500",
+									"description": "발표시각 (0200, 0500, 0800, 1100, 1400, 1700, 2000, 2300)"
+								},
+								{
+									"key": "nx",
+									"value": "60",
+									"description": "예보지점 X 좌표"
+								},
+								{
+									"key": "ny",
+									"value": "127",
+									"description": "예보지점 Y 좌표"
+								}
+							]
+						},
+						"description": "기상청 단기예보 API 직접 호출 테스트\n- base_time: 0200, 0500, 0800, 1100, 1400, 1700, 2000, 2300 (3시간 간격)"
+					},
+					"response": []
+				}
+			],
+			"description": "기상청 API 직접 호출하여 연결 상태 확인"
+		},
+		{
+			"name": "2. Weather Service 테스트",
+			"item": [
+				{
+					"name": "2-1. 지역명으로 날씨 조회",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8082/api/v1/weather?location=서울",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8082",
+							"path": [
+								"api",
+								"v1",
+								"weather"
+							],
+							"query": [
+								{
+									"key": "location",
+									"value": "서울",
+									"description": "조회할 지역명"
+								}
+							]
+						},
+						"description": "지역명으로 날씨 조회\n- 내부적으로 지역명 -> 격자좌표 변환"
+					},
+					"response": []
+				},
+				{
+					"name": "2-2. 위경도로 날씨 조회 (서울시청)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8082/api/v1/weather/coordinates?lat=37.5665&lon=126.9780",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8082",
+							"path": [
+								"api",
+								"v1",
+								"weather",
+								"coordinates"
+							],
+							"query": [
+								{
+									"key": "lat",
+									"value": "37.5665",
+									"description": "위도 (Latitude)"
+								},
+								{
+									"key": "lon",
+									"value": "126.9780",
+									"description": "경도 (Longitude)"
+								}
+							]
+						},
+						"description": "위경도로 날씨 조회 (서울 시청)\n- 위도: 37.5665\n- 경도: 126.9780\n- 자동으로 격자좌표(60, 127)로 변환됨"
+					},
+					"response": []
+				},
+				{
+					"name": "2-3. 위경도로 날씨 조회 (부산)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8082/api/v1/weather/coordinates?lat=35.1796&lon=129.0756",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8082",
+							"path": [
+								"api",
+								"v1",
+								"weather",
+								"coordinates"
+							],
+							"query": [
+								{
+									"key": "lat",
+									"value": "35.1796",
+									"description": "위도 (Latitude)"
+								},
+								{
+									"key": "lon",
+									"value": "129.0756",
+									"description": "경도 (Longitude)"
+								}
+							]
+						},
+						"description": "위경도로 날씨 조회 (부산 시청)\n- 위도: 35.1796\n- 경도: 129.0756"
+					},
+					"response": []
+				},
+				{
+					"name": "2-4. 위경도로 날씨 조회 (강남역)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8082/api/v1/weather/coordinates?lat=37.4979&lon=127.0276",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8082",
+							"path": [
+								"api",
+								"v1",
+								"weather",
+								"coordinates"
+							],
+							"query": [
+								{
+									"key": "lat",
+									"value": "37.4979",
+									"description": "위도 (Latitude)"
+								},
+								{
+									"key": "lon",
+									"value": "127.0276",
+									"description": "경도 (Longitude)"
+								}
+							]
+						},
+						"description": "위경도로 날씨 조회 (강남역)\n- 위도: 37.4979\n- 경도: 127.0276"
+					},
+					"response": []
+				},
+				{
+					"name": "2-5. 위경도로 날씨 조회 (제주도)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8082/api/v1/weather/coordinates?lat=33.4996&lon=126.5312",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8082",
+							"path": [
+								"api",
+								"v1",
+								"weather",
+								"coordinates"
+							],
+							"query": [
+								{
+									"key": "lat",
+									"value": "33.4996",
+									"description": "위도 (Latitude)"
+								},
+								{
+									"key": "lon",
+									"value": "126.5312",
+									"description": "경도 (Longitude)"
+								}
+							]
+						},
+						"description": "위경도로 날씨 조회 (제주시청)\n- 위도: 33.4996\n- 경도: 126.5312"
+					},
+					"response": []
+				}
+			],
+			"description": "Weather Service API 엔드포인트 테스트\n- 지역명 조회\n- 위경도 좌표 조회"
+		},
+		{
+			"name": "3. 좌표 변환 시뮬레이션",
+			"item": [
+				{
+					"name": "3-1. 서울 좌표 변환 확인",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8082/api/v1/weather/coordinates?lat=37.5665&lon=126.9780",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8082",
+							"path": [
+								"api",
+								"v1",
+								"weather",
+								"coordinates"
+							],
+							"query": [
+								{
+									"key": "lat",
+									"value": "37.5665"
+								},
+								{
+									"key": "lon",
+									"value": "126.9780"
+								}
+							]
+						},
+						"description": "위경도 → 격자좌표 변환 확인\n\n**서울시청**\n- 입력: 위도 37.5665, 경도 126.9780\n- 예상 격자: nx=60, ny=127\n\n**로그에서 확인할 내용:**\n```\n위경도 (126.978, 37.5665) -> 격자 (60, 127)\n```"
+					},
+					"response": []
+				},
+				{
+					"name": "3-2. 인천공항 좌표 변환 확인",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8082/api/v1/weather/coordinates?lat=37.4691&lon=126.4505",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8082",
+							"path": [
+								"api",
+								"v1",
+								"weather",
+								"coordinates"
+							],
+							"query": [
+								{
+									"key": "lat",
+									"value": "37.4691"
+								},
+								{
+									"key": "lon",
+									"value": "126.4505"
+								}
+							]
+						},
+						"description": "위경도 → 격자좌표 변환 확인\n\n**인천국제공항**\n- 입력: 위도 37.4691, 경도 126.4505\n- 예상 격자: nx=55, ny=124"
+					},
+					"response": []
+				}
+			],
+			"description": "프론트엔드에서 받은 위경도가 올바르게 격자좌표로 변환되는지 확인"
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// 현재 날짜 설정 (YYYYMMDD)",
+					"const now = new Date();",
+					"const year = now.getFullYear();",
+					"const month = String(now.getMonth() + 1).padStart(2, '0');",
+					"const day = String(now.getDate()).padStart(2, '0');",
+					"pm.variables.set('currentDate', `${year}${month}${day}`);",
+					"",
+					"// 현재 시각 설정 (HHMM) - 정시 기준으로 내림",
+					"const hour = String(now.getHours()).padStart(2, '0');",
+					"pm.variables.set('currentTime', `${hour}00`);",
+					"",
+					"console.log('현재 날짜:', pm.variables.get('currentDate'));",
+					"console.log('현재 시각:', pm.variables.get('currentTime'));"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// 응답 시간 체크",
+					"pm.test('응답 시간이 5초 이내', function () {",
+					"    pm.expect(pm.response.responseTime).to.be.below(5000);",
+					"});",
+					"",
+					"// 상태 코드 체크",
+					"pm.test('상태 코드가 200', function () {",
+					"    pm.response.to.have.status(200);",
+					"});",
+					"",
+					"// JSON 응답 체크",
+					"if (pm.response.headers.get('Content-Type').includes('application/json')) {",
+					"    pm.test('JSON 응답 파싱 성공', function () {",
+					"        pm.response.to.be.json;",
+					"    });",
+					"}"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8082/api/v1",
+			"type": "string"
+		},
+		{
+			"key": "weatherApiUrl",
+			"value": "http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0",
+			"type": "string"
+		}
+	]
+}

@@ -6,7 +6,10 @@
       "Bash(./gradlew bootRun:*)",
       "Bash(netstat:*)",
       "Bash(findstr:*)",
-      "Bash(tasklist:*)"
+      "Bash(tasklist:*)",
+      "Bash(for file in *.java)",
+      "Bash(do sed -i 's/package today\\\\.wishwordrobe\\\\.presentation\\\\.dto;/package today.wishwordrobe.weather.dto;/g' \"$file\")",
+      "Bash(done)"
     ],
     "deny": [],
     "ask": []

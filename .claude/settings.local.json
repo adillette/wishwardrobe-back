@@ -2,7 +2,17 @@
   "permissions": {
     "allow": [
       "Bash(netstat:*)",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Bash(./mvnw clean:*)",
+      "Bash(mvn clean:*)",
+      "Bash(dir:*)",
+      "Bash(./gradlew clean:*)",
+      "Bash(./gradlew bootRun)",
+      "Bash(timeout 30 bash -c 'until netstat -an | findstr \"\":8082.*LISTENING\"\" > /dev/null; do sleep 1; done')",
+      "Bash(curl:*)",
+      "Bash(python -m json.tool:*)",
+      "Bash(taskkill:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []

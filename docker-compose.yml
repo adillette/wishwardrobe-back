@@ -9,6 +9,8 @@ services:
     container_name: gateway-service
     ports:
       - "8080:8080"
+    env_file:
+      - .env
     depends_on:
       - clothes-service
       - weather-service
@@ -24,12 +26,8 @@ services:
     container_name: clothes-service
     ports:
       - "8081:8081"
-    environment:
-      - SPRING_PROFILES_ACTIVE=docker
-      - SPRING_DATASOURCE_URL=jdbc:oracle:thin:@oracle-db:1521:XE
-      - SPRING_DATASOURCE_USERNAME=system
-      - SPRING_DATASOURCE_PASSWORD=oracle
-      - FILE_UPLOAD_DIR=/app/uploads
+    env_file:
+      - .env
     volumes:
       - clothes-uploads:/app/uploads
     depends_on:
@@ -45,10 +43,9 @@ services:
     container_name: wishwordrobe-oracle
     ports:
       - "1521:1521"
-    environment:
-      ORACLE_PASSWORD: oracle
-      APP_USER: clothes_user
-      APP_USER_PASSWORD: clothes123
+    env_file:
+      - .env
+    
     volumes:
       - oracle-data:/opt/oracle/oradata
     networks:
@@ -67,9 +64,8 @@ services:
     container_name: weather-service
     ports:
       - "8082:8082"
-    environment:
-      - SPRING_PROFILES_ACTIVE=docker
-      - SPRING_DATA_MONGODB_URI=mongodb://admin:admin123@mongodb:27017/wishweather?authSource=admin
+    env_file:
+      - .env
     depends_on:
       mongodb:
         condition: service_healthy
@@ -108,11 +104,9 @@ services:
     container_name: notification-service
     ports:
       - "8083:8083"
-    environment:
-      - MONGODB_URI=${MONGODB_URI}
-      - WEBPUSH_PUBLIC_KEY=${WEBPUSH_PUBLIC_KEY}
-      - WEBPUSH_PRIVATE_KEY=${WEBPUSH_PRIVATE_KEY}
-      
+    env_file:
+      - .env
+    
     volumes:
       - ./notification-service/src/main/resources/service-account-key.json:/app/service-account-key.json:ro
     depends_on:
@@ -130,15 +124,12 @@ services:
       dockerfile: Dockerfile
     container_name: wishwardrobe-front
     ports:
-      - "8080:8080"
-    environment:
-      - VUE_APP_CLOTHES_API_URL=http://clothes-service:8081
-      - VUE_APP_WEATHER_API_URL=http://weather-service:8082
-      - VUE_APP_NOTIFICATION_API_URL=http://notification-service:8083
+      - "3000:80"
+    env_file:
+      - .env
+    
     depends_on:
-      - clothes-service
-      - weather-service
-      - notification-service
+      - gateway-service
     networks:
       - wishwordrobe-network
     restart: unless-stopped
@@ -149,5 +140,4 @@ networks:
 
 volumes:
   oracle-data:
-  mongodb-data:
   clothes-uploads:

@@ -1,62 +1,34 @@
-server:
-  port: 8081
-
 spring:
-  application:
-    name: clothes-service
-
-
-
-  servlet:
-    multipart:
-      max-file-size: 200MB
-      max-request-size: 200MB
-      enabled: true
-
   datasource:
-    # url: jdbc:oracle:thin:@localhost:1521:XE
-    # driver-class-name: oracle.jdbc.OracleDriver
-    # username: system
-    # password: oracle
-       
-      url: jdbc:h2:mem:testdb;MODE=Oracle;DB_CLOSE_DELAY=-1;DATABASE_TO_UPPER=false
-      driver-class-name: org.h2.Driver
-      username: sa
-      password:
-    
-      jpa:
-        hibernate:
-          ddl-auto: create-drop
-        properties:
-          hibernate:
-            dialect: org.hibernate.dialect.H2Dialect
-    
- 
+    url: ${ORACLE_URL}
+    driver-class-name: oracle.jdbc.OracleDriver
+    username: ${ORACLE_USERNAME}
+    password: ${ORACLE_PASSWORD}
+  webmvc:
+    base-path: /api
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.OracleDialect
 
-  # jpa:
-  #   defer-datasource-initialization: true
-  #   show-sql: true
-  #   properties:
-  #     hibernate:
-  #       format_sql: true
-  #       dialect: org.hibernate.dialect.OracleDialect
-  #   hibernate:
-  #     ddl-auto: update
+  services:
+    weather:
+      url: http://weather-service:8082/api/v1
+
+file:
+  upload-dir: /app/uploads
+  uploadDir: /app/uploads
+  uploadFiles: /app/uploads
 
   cache:
     type: caffeine
     caffeine:
       spec: maximumSize=10000,expireAfterWrite=30m
 
-services:
-  weather:
-    url: http://localhost:8082/api/v1  
 
-# File Upload Configuration
-file:
-  upload-dir: D:/uploadFiles
-  uploadDir: D:/uploadFiles
-  uploadFiles: D:/uploadFiles
+
 
 # JWT Configuration
 # jwt:
@@ -70,7 +42,3 @@ logging:
     org.springframework.cache: DEBUG
     org.springframework.amqp: DEBUG
 
-# 까먹으면 안된다 MSA Service URLs
-# services:
-#   weather:
-#     url: http://localhost:8082

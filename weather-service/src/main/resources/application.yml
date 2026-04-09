@@ -7,8 +7,7 @@ spring:
 
   data:
     mongodb:
-      uri: mongodb://wish:wish123@localhost:27017/wishweather?authSource=wishnotification
-
+      uri: ${MONGODB_URI_WEATHER}
       auto-index-creation: true
   cache:
     type: caffeine

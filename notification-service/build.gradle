@@ -31,14 +31,18 @@ dependencies {
 
     // Firebase Cloud Messaging
     implementation 'com.google.firebase:firebase-admin:9.4.3'
+    //Actuator
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
-
-
+    //메트릭 노출
+    implementation 'io.micrometer:micrometer-registry-prometheus'
     // Web Push (5.1.3+는 FCM v1 API 호환 헤더 지원)
     implementation 'nl.martijndwars:web-push:5.1.1'
     implementation 'org.bouncycastle:bcprov-jdk18on:1.78.1'
     implementation 'org.bitbucket.b_c:jose4j:0.9.6'
 
+    //서버 다운되는거 막기 위한 httpclient 도입
+    implementation 'org.asynchttpclient:async-http-client:3.0.7'
     // Jackson
     implementation 'com.fasterxml.jackson.core:jackson-databind'
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
@@ -50,7 +54,10 @@ dependencies {
     // Test
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'io.projectreactor:reactor-test'
-    // https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-thymeleaf
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testImplementation 'org.wiremock:wiremock-standalone:3.5.4'
+
+
     implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
 }
 

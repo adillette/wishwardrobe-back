@@ -10,14 +10,20 @@ spring:
         - id: clothes-service
           uri: http://clothes-service:8081
           predicates:
-            - Path=/clothes/**
+            - Path=/api/clothes/**, /api/users/**, /api/test/**
+          filters:
+            - StripPrefix=1
 
         - id: weather-service
           uri: http://weather-service:8082
           predicates:
-            - Path=/weather/**
+            - Path=/api/weather/**
+          filters:
+            - StripPrefix=1
 
         - id: notification-service
           uri: http://notification-service:8083
           predicates:
-            - Path=/notification/**
+            - Path=/api/notification/**
+          filters:
+            - StripPrefix=1

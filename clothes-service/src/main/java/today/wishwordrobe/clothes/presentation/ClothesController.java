@@ -13,7 +13,7 @@ import java.util.List;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/clothes")
+@RequestMapping("/clothes")
 public class ClothesController{//아래 setter 바꿔야한다
     private final ClothesService clothesService;
 

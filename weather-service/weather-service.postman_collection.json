@@ -1,0 +1,181 @@
+{
+  "info": {
+    "name": "Weather Service API",
+    "description": "기상청 API 연동 테스트 - 지역명 기반 날씨 조회",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8082",
+      "type": "string"
+    },
+    {
+      "key": "location",
+      "value": "청운동",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "날씨 조회 - 청운동",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/weather?location={{location}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "weather"],
+          "query": [
+            {
+              "key": "location",
+              "value": "{{location}}",
+              "description": "동 단위 지역명 (location_data.json의 3단계 값)"
+            }
+          ]
+        },
+        "description": "지역명으로 날씨 정보 조회 (기상청 API 연동)"
+      },
+      "response": []
+    },
+    {
+      "name": "날씨 조회 - 서울",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/weather?location=서울",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "weather"],
+          "query": [
+            {
+              "key": "location",
+              "value": "서울"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "날씨 조회 - 부산",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/weather?location=부산",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "weather"],
+          "query": [
+            {
+              "key": "location",
+              "value": "부산"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "날씨 조회 - 대구",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/weather?location=대구",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "weather"],
+          "query": [
+            {
+              "key": "location",
+              "value": "대구"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "날씨 조회 - 인천",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/weather?location=인천",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "weather"],
+          "query": [
+            {
+              "key": "location",
+              "value": "인천"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "날씨 조회 - 위경도 (서울 시청)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/weather/coordinates?lat=37.5665&lon=126.9780",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "weather", "coordinates"],
+          "query": [
+            {
+              "key": "lat",
+              "value": "37.5665",
+              "description": "위도 (latitude)"
+            },
+            {
+              "key": "lon",
+              "value": "126.9780",
+              "description": "경도 (longitude)"
+            }
+          ]
+        },
+        "description": "위도/경도로 날씨 정보 조회 (Lambert 좌표 변환)"
+      },
+      "response": []
+    },
+    {
+      "name": "날씨 조회 - 위경도 (강남역)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/weather/coordinates?lat=37.4979&lon=127.0276",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "weather", "coordinates"],
+          "query": [
+            {
+              "key": "lat",
+              "value": "37.4979"
+            },
+            {
+              "key": "lon",
+              "value": "127.0276"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "헬스 체크 (테스트용)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/test/health",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "test", "health"]
+        },
+        "description": "서비스 헬스 체크 (현재 base-path 중복 문제로 /api/v1/api/v1/test/health일 수 있음)"
+      },
+      "response": []
+    }
+  ]
+}

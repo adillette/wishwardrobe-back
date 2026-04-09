@@ -53,9 +53,7 @@ public class PushNotificationController {
                 .then(Mono.just(ResponseEntity.ok().build()));
     }
 
-    /*
-     * 여기 부터 dto가 바뀐거 때문에 변경해야한다.
-     */
+   
     @PostMapping("/send-topic")
     public Mono<ResponseEntity<String>> sendTopicNotification(@RequestBody FCMPushNotificationRequest request) {
         if (request.getTopic() == null) {

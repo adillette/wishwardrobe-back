@@ -35,10 +35,4 @@ out/
 
 ### VS Code ###
 .vscode/
-
-### Gradle ###
-.gradle/
-gradle/
-gradlew
-gradlew.bat
 .env
