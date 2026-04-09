@@ -1,0 +1,23 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: gateway-service
+  cloud:
+    gateway:
+      routes:
+        - id: clothes-service
+          uri: http://clothes-service:8081
+          predicates:
+            - Path=/clothes/**
+
+        - id: weather-service
+          uri: http://weather-service:8082
+          predicates:
+            - Path=/weather/**
+
+        - id: notification-service
+          uri: http://notification-service:8083
+          predicates:
+            - Path=/notification/**
