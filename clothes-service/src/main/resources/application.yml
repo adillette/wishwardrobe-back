@@ -3,10 +3,8 @@ server:
   servlet:
     context-path: /api
 
-
 spring:
   datasource:
-
     url: jdbc:h2:mem:testdb
     driver-class-name: org.h2.Driver
     username: sa
@@ -14,40 +12,31 @@ spring:
 
   h2:
     console:
-      enabled: true  
+      enabled: true
 
   jpa:
     hibernate:
       ddl-auto: update
     database-platform: org.hibernate.dialect.H2Dialect
 
-        
+  cache:
+    # // spring.cache 위치가 맞음. 기존엔 file 하위에 있었음
+    type: caffeine
+    caffeine:
+      spec: maximumSize=10000,expireAfterWrite=30m
+
 services:
   weather:
-    url: http://weather-service:8082/api/v1
+    url: ${WEATHER_SERVICE_URL:http://localhost:8082/api/v1}
+    # // 환경변수 있으면 사용, 없으면 로컬 기본값
 
 file:
   upload-dir: /app/uploads
   uploadDir: /app/uploads
   uploadFiles: /app/uploads
 
-  cache:
-    type: caffeine
-    caffeine:
-      spec: maximumSize=10000,expireAfterWrite=30m
-
-
-
-
-# JWT Configuration
-# jwt:
-#   issuer: wishful@gmail.com
-#   secret_key: iwish
-
-# Logging
 logging:
   level:
     today.wishwordrobe: DEBUG
     org.springframework.cache: DEBUG
     org.springframework.amqp: DEBUG
-
