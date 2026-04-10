@@ -12,7 +12,7 @@ services:
     env_file:
       - .env
     depends_on:
-    
+
       - clothes-service
       - weather-service
       - notification-service
@@ -31,31 +31,13 @@ services:
       - .env
     volumes:
       - clothes-uploads:/app/uploads
-    depends_on:
-      oracle-db:
-        condition: service_healthy
+   
     networks:
       - wishwordrobe-network
     restart: unless-stopped
 
   # Oracle Database - 의류 데이터 저장
-  oracle-db:
-    image: gvenzl/oracle-xe:21-slim
-    container_name: wishwordrobe-oracle
-    ports:
-      - "1521:1521"
-    env_file:
-      - .env
-    
-    volumes:
-      - oracle-data:/opt/oracle/oradata
-    networks:
-      - wishwordrobe-network
-    healthcheck:
-      test: ["CMD", "healthcheck.sh"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+  
   
   # Weather Service - 날씨 정보 서비스 (WebFlux)
   weather-service:
@@ -140,5 +122,5 @@ networks:
     driver: bridge
 
 volumes:
-  oracle-data:
+ 
   clothes-uploads:

@@ -44,7 +44,7 @@ dependencies {
     implementation 'at.favre.lib:bcrypt:0.10.2'
 
     // Database
-    runtimeOnly 'com.oracle.database.jdbc:ojdbc11'
+    // runtimeOnly 'com.oracle.database.jdbc:ojdbc11'
 
     // Lombok
     compileOnly 'org.projectlombok:lombok:1.18.30'
