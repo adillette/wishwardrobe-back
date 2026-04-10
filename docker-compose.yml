@@ -33,11 +33,6 @@ services:
     networks:
       - wishwordrobe-network
     restart: unless-stopped
-    env_file:
-      - .env
-
-    networks:
-      - wishwordrobe-network
 
 
   # Weather Service - 날씨 정보 서비스 (WebFlux)
