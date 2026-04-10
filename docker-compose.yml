@@ -33,6 +33,12 @@ services:
     networks:
       - wishwordrobe-network
     restart: unless-stopped
+    env_file:
+      - .env
+
+    networks:
+      - wishwordrobe-network
+
 
   # Weather Service - 날씨 정보 서비스 (WebFlux)
   weather-service:
@@ -47,8 +53,6 @@ services:
     networks:
       - wishwordrobe-network
     restart: unless-stopped
-
-
   # Notification Service - 알림 서비스 (WebFlux)
   notification-service:
     build:
@@ -59,10 +63,9 @@ services:
       - "8083:8083"
     env_file:
       - .env
-    
     volumes:
       - ./notification-service/src/main/resources/service-account-key.json:/app/service-account-key.json:ro
-   
+
     networks:
       - wishwordrobe-network
     restart: unless-stopped
@@ -70,14 +73,13 @@ services:
   # Frontend - Vue.js Application
   wishwardrobe-front:
     build:
-      context: ../wishwardrobe-front
+      context: /home/ubuntu/wishwardrobe-front
       dockerfile: Dockerfile
     container_name: wishwardrobe-front
     ports:
       - "3000:80"
     env_file:
       - .env
-    
     depends_on:
       - gateway-service
     networks:
