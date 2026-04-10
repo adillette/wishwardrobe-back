@@ -12,7 +12,6 @@ services:
     env_file:
       - .env
     depends_on:
-
       - clothes-service
       - weather-service
       - notification-service
@@ -31,14 +30,10 @@ services:
       - .env
     volumes:
       - clothes-uploads:/app/uploads
-   
     networks:
       - wishwordrobe-network
     restart: unless-stopped
 
-  # Oracle Database - 의류 데이터 저장
-  
-  
   # Weather Service - 날씨 정보 서비스 (WebFlux)
   weather-service:
     build:
@@ -49,15 +44,10 @@ services:
       - "8082:8082"
     env_file:
       - .env
-    
     networks:
       - wishwordrobe-network
     restart: unless-stopped
 
-
-  # MongoDB - 날씨 및 알림 데이터 저장
-  
-  
 
   # Notification Service - 알림 서비스 (WebFlux)
   notification-service:
