@@ -1,5 +1,6 @@
 spring:
   datasource:
+  
     url: ${ORACLE_URL}
     driver-class-name: oracle.jdbc.OracleDriver
     username: ${ORACLE_USERNAME}
