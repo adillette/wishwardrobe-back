@@ -23,7 +23,7 @@ spring:
 # Weather API Configuration
 weather:
   api:
-    api-key: "dJ%2B1bX3L4D5nk3DlGR7hHcEexw5lZK9kOiQYE3SUIEmLH7O%2FHd%2F7TBDEWzgPvqQJbYyWJpgLjR67KsK59dX3ow%3D%3D"
+    api-key: ${WEATHER_API_KEY}
     base-url: "http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0"
     village-fcst-url: "/getVilageFcst"
     ultra-srt-fcst-url: "/getUltraSrtFcst"
@@ -35,7 +35,7 @@ weather:
 # AirKorea api
 airkorea:
   api:
-    api-key: "dJ%2B1bX3L4D5nk3DlGR7hHcEexw5lZK9kOiQYE3SUIEmLH7O%2FHd%2F7TBDEWzgPvqQJbYyWJpgLjR67KsK59dX3ow%3D%3D"
+    api-key: ${AIRKOREA_API_KEY}
     base-url: "http://apis.data.go.kr/B552584/ArpltnInforInqireSvc"
     air-quality-url: "/getMsrstnAcctoRltmMesureDnsty"
 
