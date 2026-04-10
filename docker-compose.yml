@@ -49,34 +49,14 @@ services:
       - "8082:8082"
     env_file:
       - .env
-    depends_on:
-      mongodb:
-        condition: service_healthy
-      
+    
     networks:
       - wishwordrobe-network
     restart: unless-stopped
 
 
   # MongoDB - 날씨 및 알림 데이터 저장
-  mongodb:
-    image: mongo:7
-    container_name: wishwordrobe-mongodb
-    ports:
-      - "27017:27017"
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: admin123
-    volumes:
-      - mongodb-data:/data/db
-    networks:
-      - wishwordrobe-network
-    healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-
+  
   
 
   # Notification Service - 알림 서비스 (WebFlux)
@@ -92,10 +72,7 @@ services:
     
     volumes:
       - ./notification-service/src/main/resources/service-account-key.json:/app/service-account-key.json:ro
-    depends_on:
-      mongodb:
-        condition: service_healthy
-      
+   
     networks:
       - wishwordrobe-network
     restart: unless-stopped
@@ -122,5 +99,4 @@ networks:
     driver: bridge
 
 volumes:
- 
   clothes-uploads:
