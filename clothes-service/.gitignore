@@ -41,4 +41,7 @@ out/
 gradle/
 gradlew
 gradlew.bat
+
+### Environment ###
 .env
+*.env
