@@ -20,7 +20,7 @@ spring:
 
 # Firebase Configuration
 firebase:
-  config-path: classpath:service-account-key.json
+  config-path: file:/app/service-account-key.json
 
 # Web Push Configuration
 webpush:
