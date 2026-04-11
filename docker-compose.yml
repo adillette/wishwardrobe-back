@@ -69,6 +69,8 @@ services:
   wishwardrobe-front:
     build:
       context: /home/ubuntu/wishwardrobe-front
+      args:
+        - VUE_APP_KAKAO_JS_KEY: ${VUE_APP_KAKAO_JS_KEY}
       dockerfile: Dockerfile
     container_name: wishwardrobe-front
     ports:
