@@ -1,95 +1,48 @@
 
-# 오늘의 옷장 (WishWardrobe)
+## 오늘의 옷장 (WishWardrobe)
 
 > WebFlux 비동기 처리 기반 푸시 알림 시스템  
-> 개인 프로젝트 | 2025.04 – 2026.02
+> 개인 프로젝트 | 2025.04 – 2026.04(12개월)
 
 ---
 
 ## 기술 스택
-
-| 분류 | 기술 |
-|------|------|
-| Backend | Java, Spring WebFlux |
-| Database | Oracle, MongoDB |
-| 외부 서비스 | Firebase Cloud Messaging, Web Push API |
-| 인프라 | Docker, GitHub |
-| Frontend | Vue.js |
-
----
-
-## 핵심 문제 해결
-
-### 1. FCM 스레드 풀 고갈 → 전체 서비스 장애 제거
-
-**문제**  
-부하 테스트 중 전체 API 응답 불가 현상 발생.  
-Firebase SDK `.get()` 호출이 유효하지 않은 토큰에서 무한 대기 상태로 진입,  
-스레드 풀을 점유하면서 정상 요청까지 처리 불가 상태로 전파됨.
-
-**원인 분석**  
-- Firebase Admin SDK의 `.get()`은 블로킹 호출
-- 단일 토큰의 무한 대기가 전체 스레드 풀 고갈로 이어지는 구조적 결함
-- 첫 수정 시도: `subscribeOn` + timeout 적용 → `InterruptedException`이 `onErrorDropped`로 무시되는 부작용 확인
-
-**해결**  
-`ApiFutures.addCallback` + `Mono.create`로 Future → Mono 타입 브릿징,  
-블로킹 완전 제거 및 콜백 기반 비동기 처리로 전환.  
-개별 FCM 응답 실측값 67–88ms 기준 5초 타임아웃 설정으로 단일 토큰 장애의 전체 서비스 전파 구조 차단.
-
+Java, Spring WebFlux,Oracle, MongoDB,AWS EC2,Fcm, Web Push API,Docker, GitHub,Vue.js
 
 
 ---
+![시스템흐름](./docs/오늘의집.png)
 
-### 2. WebPush 블로킹 I/O → 비동기 전환으로 처리 시간 94% 단축
 
-**문제**  
-WebPush 발송 건당 처리 시간 82초 확인 (JMeter 실측).
+## 핵심 구현: FCM/WebPush 비동기 알림 발송
 
-**원인 분석**  
-`nl.martijndwars.webpush` 라이브러리가 내부적으로 블로킹 I/O 사용.  
-구독자 수 증가 시 선형적 처리 시간 증가 구조.
+**배경**
+사용자 환경에 따라 알림 채널을 분기:
+- 모바일 앱 → FCM
+- 웹 브라우저 → WebPush
+각 채널을 독립 Mono로 구성해 한쪽 실패가 다른 채널에 영향을 주지 않도록 설계
 
-**해결**  
-`AsyncHttpClient` + `CompletableFuture` → `Mono.fromFuture()` 전환으로 비동기화.  
-410 Gone 미처리 발견 → `HttpResponse.statusCode()` 직접 확인 후 만료 구독 즉시 제거.  
-스케줄러 배치로 만료 구독 이중 정리, 불필요한 재전송 완전 차단.
+동기 처리 시 두 가지 문제 확인:
+- Firebase SDK .get() 블로킹 호출이 비정상 토큰에서 무한 대기
+  → 스레드 점유로 정상 요청까지 차단되는 스레드 풀 고갈 발생
+- WebPush 라이브러리 블로킹 I/O로 건당 최대 82초 지연
+  → 만료 구독(410 Gone) 미감지로 불필요한 재전송 반복
 
-| 지표 | 개선 전 | 개선 후 |
-|------|---------|---------|
-| 건당 처리 시간 | 82초 | 5초 |
-| 개선율 | — | **94% 단축** |
+**해결**
 
----
+FCM:
+- ApiFutures로 Future → Mono 타입 통합
+- reactor cancel 신호가 에러 경로로 정상 전파되도록 재설계
+- 개별 응답 측정값(67~88ms) 기준 5초 타임아웃 설정
 
-### 3. Fan-out Concurrency 실측 최적화
+WebPush:
+- AsyncHttpClient 비동기 전환 후 Mono.fromFuture()로 WebFlux 파이프라인 연결
+- HttpResponse.statusCode() 직접 확인으로 410 Gone 즉시 감지 → 만료 구독 즉시 삭제
 
-**문제**  
-다수 구독자 대상 브로드캐스트 시 concurrency 설정값 근거 없음.
-
-**접근**  
-concurrency 10 / 20 / 30 / 40 / 50 단계별 JMeter 부하 테스트 실측.
-
-**결과**  
-concurrency 30 채택: P95 응답시간 11.7%↓, 처리량 13.3%↑  
-40 이상에서는 오히려 컨텍스트 스위칭 오버헤드로 성능 저하 확인.
-
----
-
-## 프로젝트 구조
-
-```
-wishwardrobe-back/
-├── notification-service/   # FCM, WebPush 비동기 처리
-├── clothes-service/        # 옷장 관리
-├── weather-service/        # 기상청 API 연동
-└── docker-compose.yml
-```
+**검증**
+Fake 토큰 100개 → 1,000개로 부하 확장 테스트:
+- 비정상 토큰 유입 시에도 정상 요청 처리되는 장애 격리 구조 확인
+- 만료 구독 재전송 차단 확인
 
 ---
 
-## 실행 방법
-
-```bash
-docker-compose up -d
-```
