@@ -7,14 +7,8 @@
 ---
 
 ## 기술 스택
+Java, Spring WebFlux,Oracle, MongoDB,Firebase Cloud Messaging, Web Push API,Docker, GitHub,Vue.js
 
-| 분류 | 기술 |
-|------|------|
-| Backend | Java, Spring WebFlux |
-| Database | Oracle, MongoDB |
-| 외부 서비스 | Firebase Cloud Messaging, Web Push API |
-| 인프라 | Docker, GitHub |
-| Frontend | Vue.js |
 
 ---
 ![시스템흐름](./docs/오늘의집.png)
