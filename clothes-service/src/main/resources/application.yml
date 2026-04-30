@@ -24,6 +24,11 @@ spring:
     type: caffeine
     caffeine:
       spec: maximumSize=10000,expireAfterWrite=30m
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: 5672
+    username: guest
+    password: guest
 
 services:
   weather:
