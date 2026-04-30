@@ -27,7 +27,8 @@ dependencies {
 
     // Spring Cloud OpenFeign (MSA 동기 통신)
     implementation 'org.springframework.cloud:spring-cloud-starter-openfeign:4.1.0'
-
+    //rabbitMQ
+    implementation 'org.springframework.boot:spring-boot-starter-amqp:4.1.0-RC1'
     // Cache
     implementation 'org.springframework.boot:spring-boot-starter-cache'
       
