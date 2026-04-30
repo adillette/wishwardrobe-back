@@ -4,6 +4,26 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.util.*;
+
+/*
+프론트 위경도 (lat, lon)
+  ↓
+WeatherGridConverter.toGrid()   ← 위경도 → 기상청 격자(nx, ny) 변환
+  ↓
+Geographic 객체에 gridX, gridY 담기
+  ↓
+WeatherClient.getVillageForecast(geoLocation)
+  ↓ nx, ny 파라미터로 기상청 API 호출
+  ↓
+VillageForecastResponse 파싱
+  ↓
+WeatherForecastDTO 반환
+
+
+*/
+
+
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

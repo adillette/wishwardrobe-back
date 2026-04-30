@@ -3,7 +3,8 @@ package today.wishwordrobe.clothes.infrastructure.client;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import today.wishwordrobe.clothes.infrastructure.dto.WeatherResponse;
+
+import today.wishwordrobe.clothes.infrastructure.dto.WeatherForecastDTO;
 
 /**
  * Weather Service와 통신하는 Feign Client
@@ -13,11 +14,11 @@ import today.wishwordrobe.clothes.infrastructure.dto.WeatherResponse;
 public interface WeatherServiceClient {
 
     // 위경도 기반 날씨 조회
-    @GetMapping("/api/v1/weather/coordinates")
-    WeatherResponse getWeatherByCoordinates(@RequestParam("lat") double lat,
+    @GetMapping("/weather/coordinates")
+    WeatherForecastDTO getWeatherByCoordinates(@RequestParam("lat") double lat,
             @RequestParam("lon") double lon);
 
-    @GetMapping("/api/v1/weather")
-    WeatherResponse getWeatherByLocation(@RequestParam("location") String locaString);
+    @GetMapping("/weather")
+    WeatherForecastDTO getWeatherByLocation(@RequestParam("location") String locaString);
 
 }

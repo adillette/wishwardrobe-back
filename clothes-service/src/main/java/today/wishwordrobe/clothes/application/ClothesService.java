@@ -16,7 +16,7 @@ import today.wishwordrobe.clothes.domain.ClothingCategory;
 import today.wishwordrobe.clothes.domain.TempRange;
 import today.wishwordrobe.clothes.infrastructure.ClothesRepository;
 import today.wishwordrobe.clothes.infrastructure.client.WeatherServiceClient;
-import today.wishwordrobe.clothes.infrastructure.dto.WeatherResponse;
+import today.wishwordrobe.clothes.infrastructure.dto.WeatherForecastDTO;
 
 @RequiredArgsConstructor
 @Service
@@ -33,20 +33,11 @@ public class ClothesService {
             Double lat, Double lon, ClothingCategory category) {
         log.info("위경도 기반 옷 추천: userId={}, lat={}, lon={}", userId, lat, lon);
             
-        WeatherResponse weather = weatherServiceClient.getWeatherByCoordinates(lat,lon);
+        WeatherForecastDTO weather = weatherServiceClient.getWeatherByCoordinates(lat,lon);
         
-        int avgTemp=0;
-        if (weather.getMaxTemperature() != null && weather.getMinTemperature() != null) {
-        avgTemp = (int) Math.round((weather.getMaxTemperature() + weather.getMinTemperature()) / 2.0);
-    } else if (weather.getMaxTemperature() != null) {
-        avgTemp = weather.getMaxTemperature().intValue();
-    } else if (weather.getMinTemperature() != null) {
-        avgTemp = weather.getMinTemperature().intValue();
-    }
-       log.info("날씨 정보 수신: 최고={}, 최저={}, 평균={}", 
-             weather.getMaxTemperature(), weather.getMinTemperature(), avgTemp);
+       
         //온도를 범위로 변환
-        TempRange tempRange = TempRange.fromTemperature(avgTemp);
+        TempRange tempRange = TempRange.fromTemperature(calcAvgTemp(weather));
                 
         //캐시를 사용해서 옷 조회
         List<Clothes> candidates=getClothesWithCache(userId, tempRange, category);
@@ -61,10 +52,10 @@ public class ClothesService {
     public List<Clothes> getClothesRecommendationByLocation(Long userId, 
                             String location, ClothingCategory category) {
         // Weather 서비스에서 날씨 정보 가져오기 (Feign Client - 동기 통신)
-        WeatherResponse weather = weatherServiceClient.getWeatherByLocation(location);
+        WeatherForecastDTO weather = weatherServiceClient.getWeatherByLocation(location);
 
         // 온도를 범위로 변환
-        TempRange tempRange = TempRange.fromTemperature(weather.getTemperature());
+        TempRange tempRange = TempRange.fromTemperature(calcAvgTemp(weather));
 
         List<Clothes> candidates = getClothesWithCache(userId, tempRange, category);
 
@@ -138,6 +129,24 @@ public class ClothesService {
     // 5.캐시없이 데이터 찾기
     public List<Clothes> findAll() {
         return clothesRepository.findAll();
+    }
+
+    private int calcAvgTemp(WeatherForecastDTO weather){
+        if(weather ==null){
+            throw new IllegalArgumentException("Weather data is null");
+        }
+
+        Double max= weather.getMaxTemperature();
+        Double min= weather.getMinTemperature();
+        if (max == null && min == null) {
+        throw new IllegalStateException("Temperature data is missing");
+    }
+
+    if (max != null && min != null) {
+        return (int) Math.round((max + min) / 2.0);
+    }
+
+    return (max != null ? max : min).intValue();
     }
 
 }
