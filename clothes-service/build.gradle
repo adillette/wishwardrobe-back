@@ -17,7 +17,7 @@ configurations {
 repositories {
     mavenCentral()
 }
-
+ 
 dependencies {
     // Spring Boot Web MVC
     implementation 'org.springframework.boot:spring-boot-starter-web'
@@ -28,7 +28,7 @@ dependencies {
     // Spring Cloud OpenFeign (MSA 동기 통신)
     implementation 'org.springframework.cloud:spring-cloud-starter-openfeign:4.1.0'
     //rabbitMQ
-    implementation 'org.springframework.boot:spring-boot-starter-amqp:4.1.0-RC1'
+    implementation 'org.springframework.boot:spring-boot-starter-amqp'
     // Cache
     implementation 'org.springframework.boot:spring-boot-starter-cache'
       
@@ -48,16 +48,26 @@ dependencies {
     // runtimeOnly 'com.oracle.database.jdbc:ojdbc11'
 
     // Lombok
-    compileOnly 'org.projectlombok:lombok:1.18.30'
-    annotationProcessor 'org.projectlombok:lombok:1.18.30'
+    // Source: https://mvnrepository.com/artifact/org.projectlombok/lombok
+    compileOnly 'org.projectlombok:lombok:1.18.42'
+    annotationProcessor 'org.projectlombok:lombok:1.18.42'
 
     // Test
    
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.wiremock:wiremock-standalone:3.5.4'
     testRuntimeOnly 'com.h2database:h2'
+
+    testCompileOnly 'org.projectlombok:lombok:1.18.42'
+    testAnnotationProcessor 'org.projectlombok:lombok:1.18.42'
 }
 
 tasks.named('test') {
     useJUnitPlatform()
+
+    testLogging {
+        events "passed", "failed", "skipped"
+        showStandardStreams = true
+        exceptionFormat = "full"
+    }
 }
