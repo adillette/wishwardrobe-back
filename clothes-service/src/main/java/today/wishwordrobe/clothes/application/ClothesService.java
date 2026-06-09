@@ -26,6 +26,7 @@ public class ClothesService {
 
     private final ClothesRepository clothesRepository;
     private final WeatherServiceClient weatherServiceClient;
+    
     public String IMAGE_BASE_URL;
     // 위경도에 맞는추천
     public List<Clothes> getClothesRecommendationByCoordinates(
@@ -148,5 +149,8 @@ public class ClothesService {
 
     return (max != null ? max : min).intValue();
     }
+
+
+
 
 }
