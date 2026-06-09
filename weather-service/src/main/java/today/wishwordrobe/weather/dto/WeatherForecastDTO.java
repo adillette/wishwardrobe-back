@@ -1,13 +1,16 @@
 package today.wishwordrobe.weather.dto;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
+
+import org.springframework.data.mongodb.core.mapping.Document;
+
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
-import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.time.LocalDate;
-import java.time.LocalTime;
+
 
 @Document
 @Builder

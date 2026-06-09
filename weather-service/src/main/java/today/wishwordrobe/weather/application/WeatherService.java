@@ -7,8 +7,8 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
@@ -19,6 +19,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
+import today.wishwordrobe.weather.domain.Geographic;
 import today.wishwordrobe.weather.dto.AirQualityDto;
 import today.wishwordrobe.weather.dto.AirQualityResponse;
 import today.wishwordrobe.weather.dto.IntegratedWeatherDto;
@@ -26,11 +27,10 @@ import today.wishwordrobe.weather.dto.UVIndexDto;
 import today.wishwordrobe.weather.dto.UVIndexResponse;
 import today.wishwordrobe.weather.dto.VillageForecastResponse;
 import today.wishwordrobe.weather.dto.WeatherForecastDTO;
-import today.wishwordrobe.weather.domain.Geographic;
+import today.wishwordrobe.weather.dto.WeatherForecastDTO.WeatherForecastDTOBuilder;
+import today.wishwordrobe.weather.util.LocationMapper;
 import today.wishwordrobe.weather.util.WeatherGridConverter;
 import today.wishwordrobe.weather.util.WeatherGridConverter.GridCoordinate;
-import today.wishwordrobe.weather.util.LocationMapper;
-import org.springframework.cache.annotation.Cacheable;
 
 
 @Service
@@ -132,7 +132,7 @@ public class WeatherService {
         VillageForecastResponse.Items items = response.getResponse().getBody().getItems();
 
         // DTO 객체 생성해야지 맘대로 정보 가져다쓰기 쉬움
-        WeatherForecastDTO.WeatherForecastDTOBuilder builder = WeatherForecastDTO.builder()
+        WeatherForecastDTOBuilder builder  = WeatherForecastDTO.builder()
                 .region(location.getCountry())
                 .district(location.getDistrict())
                 .province(location.getProvince())

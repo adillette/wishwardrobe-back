@@ -48,8 +48,8 @@ dependencies {
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
 
     // Lombok
-    compileOnly 'org.projectlombok:lombok'
-    annotationProcessor 'org.projectlombok:lombok'
+    // Source: https://mvnrepository.com/artifact/org.projectlombok/lombok
+implementation 'org.projectlombok:lombok:1.18.42'
 
     // Test
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
