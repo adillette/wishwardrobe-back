@@ -11,7 +11,11 @@ spring:
       uri: ${MONGODB_URI_NOTIFICATION}
       #  uri: mongodb://wish:wish123@localhost:27017/wishnotification?authSource=wishnotification&maxPoolSize=1000&minPoolSize=100&maxWaitTime=5000&socketTimeout=10000&connectTimeout=5000
       auto-index-creation: true
-  
+    
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: 6379 
+      
   codec:
     max-in-memory-size: 16MB
 
