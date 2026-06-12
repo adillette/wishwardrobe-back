@@ -49,8 +49,8 @@ dependencies {
 
     // Lombok
     // Source: https://mvnrepository.com/artifact/org.projectlombok/lombok
-implementation 'org.projectlombok:lombok:1.18.42'
-
+    implementation 'org.projectlombok:lombok:1.18.42'
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis-reactive'
     // Test
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'io.projectreactor:reactor-test'
