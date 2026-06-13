@@ -2,6 +2,7 @@ package today.wishwordrobe.clothes.messaging;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -43,6 +44,7 @@ public class WeatherEventConsumer {
                                             .collect(Collectors.toList());
     
     ClothesMatchedEvent matchedEvent= new ClothesMatchedEvent(
+      UUID.randomUUID().toString(),
       event.getUserId(),
       event.getFcmToken(),
       event.getMaxTemperature(),
