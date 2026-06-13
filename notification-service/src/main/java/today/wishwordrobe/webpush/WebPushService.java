@@ -142,6 +142,31 @@ public class WebPushService {
                             status, null));
                 });
     }
+    //sendToUser() 반환 타입- 구독 전체에 대한 집계 결과
+    //consumer는 userId만 넘김 — 구독 조회/전송/오류처리 모두 여기서 처리
+    // Mono<WebPushSendSummary> 반환 — 성공/만료/실패 건수를 Consumer에서 로그로 확인 가능
+    public Mono<WebPushSendSummary> sendToUser(String userId, WebPushNotificationRequest request){
+        return webPushSubscriptionRepository
+                .findByUserIdAndIsActive(userId, true)
+                //userId로 활성 구독 전체 조회
+                .flatMap(doc-> sendNotification(doc, request)
+            .onErrorResume(e->{
+                log.error("WebPush 전송실패 userId={}, endpoint={}", userId,doc.getEndpoint());
+                return Mono.just(SendResult.FAILED);
+                //Mono.empty() 대신에 Failed 반환
+            }))
+            .collectList()
+            .map(results->new WebPushSendSummary(
+                (int)results.stream().filter(r->r==SendResult.SUCCESS).count(),
+                (int)results.stream().filter(r->r==SendResult.EXPIRED).count(),
+                (int)results.stream().filter(r->r==SendResult.FAILED).count()
+            ))
+            .doOnSuccess(summary ->log.info("WebPush 전송 집계 완료. userId={}, 전체={}, 성공={}, 만료={}, 실패={}",
+                userId, summary.total(), summary.success, summary.expired, summary.failed));
+            
+        }
+
+
 
     // 구독 삭제
     public Mono<Void> deleteByEndpoint(String endpoint) {
