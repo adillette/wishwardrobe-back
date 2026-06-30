@@ -3,7 +3,6 @@ package today.wishwordrobe.application;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.hc.client5.http.auth.AuthStateCacheable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -71,8 +70,8 @@ public class DailyWeatherScheduler {
 
 
   //대표아이디로 먼저 테스트
-   @Value("${notification.daily.default-user-id:1}")  // ← 추가
-  private Long defaultUserId;
+   @Value("${notification.daily.default-user-id:1}")
+  private String defaultUserId;
   @Value("${notification.daily.click-action:https://wishwordrobe.today}")
   private String clickAction;
 
