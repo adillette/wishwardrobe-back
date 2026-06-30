@@ -2,13 +2,14 @@ package today.wishwordrobe.presentation.dto;
 
 import java.util.Map;
 
-import lombok.Data;
+
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 //무슨 알림을 보낼지 
 //알림 발송에 필요한 공통 필드를 한곳에 모아두고 같은 메시지 구조재사용 가능
-@Data
+@Getter
 @NoArgsConstructor
 @SuperBuilder
 public class PushNotificationRequest {

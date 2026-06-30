@@ -1,8 +1,11 @@
 package today.wishwordrobe.presentation.dto;
 
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
-@Data
+@Getter
+@Setter
 public class ClothesDto {
    private Long clothesId;
     private String name;

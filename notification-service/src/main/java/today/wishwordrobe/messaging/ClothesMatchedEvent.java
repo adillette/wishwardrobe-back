@@ -4,12 +4,13 @@ import java.util.List;
 
 import org.springframework.boot.autoconfigure.cache.CacheProperties.Redis;
 
-import lombok.Data;
+
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 public class ClothesMatchedEvent {
   

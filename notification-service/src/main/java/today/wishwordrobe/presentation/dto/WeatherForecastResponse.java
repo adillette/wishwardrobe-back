@@ -1,8 +1,10 @@
 package today.wishwordrobe.presentation.dto;
 
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
-@Data
+@Getter
+@Setter
 public class WeatherForecastResponse {
   private String region;
   private Double minTemperature;
