@@ -46,10 +46,14 @@ dependencies {
     // Jackson
     implementation 'com.fasterxml.jackson.core:jackson-databind'
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
-
+     //rabbitmq
+     implementation 'org.springframework.boot:spring-boot-starter-amqp'
     // Lombok
-    // Source: https://mvnrepository.com/artifact/org.projectlombok/lombok
-    implementation 'org.projectlombok:lombok:1.18.42'
+    compileOnly 'org.projectlombok:lombok:1.18.42'
+    annotationProcessor 'org.projectlombok:lombok:1.18.42'
+    testCompileOnly 'org.projectlombok:lombok:1.18.42'
+    testAnnotationProcessor 'org.projectlombok:lombok:1.18.42'
+   //redus
     implementation 'org.springframework.boot:spring-boot-starter-data-redis-reactive'
     // Test
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
@@ -63,4 +67,8 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+    testLogging{
+        events "passed", "skipped", "failed"
+        exceptionFormat "full"
+    }
 }
