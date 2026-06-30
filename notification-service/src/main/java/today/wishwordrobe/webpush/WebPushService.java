@@ -46,7 +46,11 @@ public class WebPushService {
         this.pushAsyncService = pushAsyncService;
         this.asyncHttpClient = asyncHttpClient;
     }
-
+    public Mono<Boolean> hasActiveSubscription(String userId) {
+    return webPushSubscriptionRepository
+            .findByUserIdAndIsActive(userId, true)
+            .hasElements();
+    }
     public Mono<WebPushSubscriptionDocument> saveWebPushSubscription(String userId, WebPushSubscription subscription) {
         String endpoint = subscription.getEndpoint();
         // 엔드 포인트를 구독의 고유 식별자로 사용

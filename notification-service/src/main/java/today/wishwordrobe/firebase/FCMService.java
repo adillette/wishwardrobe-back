@@ -1,31 +1,34 @@
 package today.wishwordrobe.firebase;
 
 
-import com.google.api.core.ApiFuture;
-import com.google.api.core.ApiFutureCallback;
-import com.google.api.core.ApiFutures;
-import com.google.common.util.concurrent.MoreExecutors;
-import com.google.firebase.messaging.*;
-
-import io.netty.handler.timeout.TimeoutException;
-import lombok.extern.slf4j.Slf4j;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.concurrent.ExecutionException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.google.api.core.ApiFuture;
+import com.google.api.core.ApiFutureCallback;
+import com.google.api.core.ApiFutures;
+import com.google.common.util.concurrent.MoreExecutors;
+import com.google.firebase.messaging.AndroidConfig;
+import com.google.firebase.messaging.AndroidNotification;
+import com.google.firebase.messaging.FirebaseMessaging;
+import com.google.firebase.messaging.FirebaseMessagingException;
+import com.google.firebase.messaging.Message;
+import com.google.firebase.messaging.Notification;
+
+import io.netty.handler.timeout.TimeoutException;
+import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
-import org.springframework.transaction.annotation.Transactional;
 import today.wishwordrobe.infrastructure.FcmTokenRepository;
 import today.wishwordrobe.presentation.dto.FcmTokenDocument;
 import today.wishwordrobe.presentation.dto.FcmTokenRequest;
-
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.time.Duration;
-import java.time.LocalDateTime;
 
 @Slf4j
 @Service
@@ -36,6 +39,13 @@ public class FCMService {
     private final Logger logger = LoggerFactory.getLogger(FCMService.class);
 
     private static final int MAX_DEVICES_PER_USER = 3;
+
+    public Mono<Boolean> hasActiveToken(String userId) {
+    return fcmtokenRepository
+            .findByUserIdAndIsActive(userId, true)
+            .hasElements();
+}
+
 
     public Mono<String> sendPushNotification(FCMPushNotificationRequest request) {
             Message message = prepareMessage(request);
