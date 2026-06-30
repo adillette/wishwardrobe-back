@@ -3,5 +3,6 @@ package today.wishwordrobe.outbox.domain;
 public enum OutboxStatus {
   PENDING,
   SENT,
-  FAILED
+  FAILED,
+  NO_CHANNEL
 }
