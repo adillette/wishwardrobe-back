@@ -10,6 +10,7 @@ import com.mongodb.DuplicateKeyException;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import today.wishwordrobe.outbox.domain.OutboxEvent;
 import today.wishwordrobe.outbox.domain.OutboxStatus;
@@ -82,8 +83,9 @@ public class OutboxEventService {
   }
 
   //MarkAsFailed: FCM/WebPush 전송 실패 처리
-  //pending 상태 retryCount max_retry 미만
-  //서버 재시작 후 미처리건 자동 재처리
+  //pending 상태 retryCount max_retry 3회 미만
+  //초과시 Failed 마킹
+  // failureReason 저장 -> 실패 원인 추적 가능
   public Mono<OutboxEvent> markAsFailed(OutboxEvent event,String reason){
     event.setRetryCount(event.getRetryCount());
     event.setFailureReason(reason);
@@ -93,6 +95,23 @@ public class OutboxEventService {
     }
     return outboxEventRepository.save(event);
   }
+
+  public Mono<OutboxEvent> markAsNoChannel(OutboxEvent event,String reason){
+    event.setStatus(OutboxStatus.NO_CHANNEL);
+    event.setFailureReason(reason);
+    log.warn("전송 채널 없음. eventId={}, userId={}", event.getEventId(), event.getUserId());
+    return outboxEventRepository.save(event);
+  }
+
+  //OutbosProcessor: 재처리 대상 조회 
+  //Pending 상태+ retryCount 가 max보다 작음
+  //서버 재시작 후 미처리 건 자동 재처리
+  public Flux<OutboxEvent> getPendingEvents(){
+    return outboxEventRepository
+            .findByStatusAndRetryCountLessThan(OutboxStatus.PENDING, MAX_RETRY)
+            .doOnNext(e->log.info("재처리대상 eventId={}, retryCount={}",
+            e.getEventId(),e.getRetryCount()));
+          }
 
   //cleanupOldSentEvents: 7일 이상 지난 sent 건 삭제
   //outbox_events 컬렉션 비대화 방지
