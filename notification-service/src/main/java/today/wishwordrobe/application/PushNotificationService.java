@@ -249,6 +249,51 @@ public class PushNotificationService {
                 .doOnSuccess(v -> log.info("사용자 FCM 토큰 전체 삭제: userId={}", userId));
     }
 
+    //유저별 전송 메서드
+    public Mono<ChannelSendResult> sendToUserWithChannelCheck(String userId, String title, String body){
+        WebPushNotificationRequest request= WebPushNotificationRequest.builder()
+                                                .title(title)
+                                                .message(body)
+                                                .build();
+
+        Mono<Boolean> hasFcm= fcmService.hasActiveToken(userId);
+        Mono<Boolean> hasWebPush= webPushService.hasActiveSubscription(userId);
+
+        return Mono.zip(hasFcm, hasWebPush)
+                    .flatMap(t->{
+                boolean fcmExists = t.getT1();
+                boolean webPushExists = t.getT2();
+
+                if (!fcmExists && !webPushExists) {
+                    log.warn("전송 채널 없음. userId={}", userId);
+                    return Mono.just(ChannelSendResult.NO_CHANNEL);
+                }
+
+                Mono<Boolean> fcmResult=fcmExists? 
+                    fcmService.sendMessageToUser(userId, title, body)
+                    .then(Mono.just(true))
+                    .onErrorReturn(false)
+                    : Mono.just(false);
+                
+                Mono<Boolean> webPushResult =webPushExists? 
+                webPushService.sendToUser(userId, request)
+                .map(s->s.success>0 || s.expired>0)//전송 시도자체는 성공
+                .onErrorReturn(false)
+                :Mono.just(false);
+
+                return Mono.zip(fcmResult, webPushResult)
+                    .map(results->{
+                        boolean fcmOk =results.getT1();
+                        boolean webOk=results.getT2();
+                        if(fcmOk|| webOk) return ChannelSendResult.SENT;
+                        return ChannelSendResult.FAILED;
+                    });
+            });
+    }
+
+
+
+
     public Mono<Map<String, Object>> sendNotification(PushNotificationRequest request) {
         // 브로드캐스트 요청: WebPushNotificationRequest/FCMPushNotificationRequest가 아니면
         // MongoDB에 저장된 구독자 전체에게 발송한다.
