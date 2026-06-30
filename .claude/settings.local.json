@@ -12,7 +12,8 @@
       "Bash(curl:*)",
       "Bash(python -m json.tool:*)",
       "Bash(taskkill:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(./gradlew compileTestJava)"
     ],
     "deny": [],
     "ask": []
