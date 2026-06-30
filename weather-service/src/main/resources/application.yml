@@ -14,6 +14,23 @@ spring:
       host: ${REDIS_HOST:localhost}
       port: 6379 
 
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: 5672
+    username: guest
+    password: guest
+
+  notification-service:
+  base-url: ${NOTIFICATION_SERVICE_URL:http://localhost:8083/api}
+
+  weather:
+    scheduler:
+      enabled: true
+      cron: "0 0 7 * * *"
+      zone: Asia/Seoul
+
+
+
   cache:
     type: caffeine
     caffeine:
