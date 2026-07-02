@@ -20,17 +20,6 @@ spring:
     username: guest
     password: guest
 
-  notification-service:
-  base-url: ${NOTIFICATION_SERVICE_URL:http://localhost:8083/api}
-
-  weather:
-    scheduler:
-      enabled: true
-      cron: "0 0 7 * * *"
-      zone: Asia/Seoul
-
-
-
   cache:
     type: caffeine
     caffeine:
@@ -42,8 +31,16 @@ spring:
   webflux:
     base-path: /api/v1
 
+
+notification-service:
+  base-url: ${NOTIFICATION_SERVICE_URL:http://localhost:8083/api}
+
 # Weather API Configuration
 weather:
+  scheduler:
+    enabled: true
+    cron: "0 0 7 * * *"
+    zone: Asia/Seoul
   api:
     api-key: ${WEATHER_API_KEY}
     base-url: "http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0"

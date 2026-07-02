@@ -40,7 +40,7 @@ class NotificationConsumerTest {
     void setUp() {
         pendingOutbox = OutboxEvent.builder()
                 .eventId("evt-001")
-                .userId("user-123")
+                .userId("123")
                 .eventType("CLOTHES_MATCHED")
                 .payload("{}")
                 .build();
@@ -67,10 +67,10 @@ class NotificationConsumerTest {
         // subscribe() 내부가 비동기이므로 짧게 대기 후 검증
         awaitAsync();
 
-        verify(outboxEventService).saveWithLock(eq("evt-001"), eq("user-123"),
+        verify(outboxEventService).saveWithLock(eq("evt-001"), eq("123"),
                 eq("CLOTHES_MATCHED"), any());
         verify(pushNotificationService).sendToUserWithChannelCheck(
-                eq("user-123"), anyString(), anyString());
+                eq("123"), anyString(), anyString());
         verify(outboxEventService).markAsSent(pendingOutbox);
     }
 
@@ -151,7 +151,7 @@ class NotificationConsumerTest {
     private ClothesMatchedEvent sampleEvent() {
         ClothesMatchedEvent event = new ClothesMatchedEvent();
         event.setEventId("evt-001");
-        event.setUserId("user-123");
+        event.setUserId(123L);
         event.setFcmToken("dummy-fcm-token");
         event.setMaxTemperature(28.0);
         event.setMinTemperature(18.0);

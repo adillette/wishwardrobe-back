@@ -40,19 +40,7 @@ clothes-service:
 weather-service:
   base-url: http://localhost:8082/api/v1
 
-notification:
-  daily:
-    enabled: true
-    cron: "0 0 9 * * *"
-    lat: 37.5665
-    lon: 126.9780
-    location-label: "서울(시청)"
-    zone: Asia/Seoul
-    mobile-topic: daily-weather
-    default-user-id: 1  # ← 추천 이미지 가져올 대표 사용자
-    mobile-title: "오늘의 날씨"
-    web-title: "오늘의 날씨"
-    click-action: "http://localhost:8083"
+
 # Logging
 logging:
   level:
