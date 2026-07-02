@@ -9,7 +9,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 public class WeatherEvent {
-  private String userId;//누구 날씨인지
+  private Long userId;//누구 날씨인지
   private Double maxTemperature;
   private Double minTemperature;
   private String skyCondition;

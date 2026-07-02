@@ -21,7 +21,7 @@ public class ClothesMatchedEvent {
     
 
   private String eventId;
-  private String userId;
+  private Long userId;
   private String fcmToken;
   private Double maxTemperature;
   private Double minTemperature;

@@ -17,7 +17,7 @@ import today.wishwordrobe.clothes.messaging.ClothesItemDto;
 public class ClothesMatchedEvent {
   
   private String eventId;
-  private String userId;  
+  private Long userId;
   private String fcmToken;
   private Double maxTemperature;
     private Double minTemperature;

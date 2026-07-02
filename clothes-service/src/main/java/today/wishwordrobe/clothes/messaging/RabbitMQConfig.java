@@ -40,7 +40,7 @@ public class RabbitMQConfig {
     return BindingBuilder
             .bind(weatherClothesQueue)
             .to(weatherExchange)
-            .with(CLOTHES_ROUTING_KEY);
+            .with(WEATHER_ROUTING_KEY);
   }
 
   //clothes 발행용 설정
@@ -51,7 +51,7 @@ public class RabbitMQConfig {
 
   @Bean
   public Queue clothesNotificationQueue(){
-    return new Queue(CLOTHES_EXCHANGE, true);
+    return new Queue(CLOTHES_QUEUE, true);
   }
 
   @Bean

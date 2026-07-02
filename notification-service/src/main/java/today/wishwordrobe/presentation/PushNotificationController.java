@@ -5,6 +5,7 @@ import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -15,12 +16,18 @@ import org.springframework.web.bind.annotation.RestController;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 import today.wishwordrobe.application.PushNotificationService;
+import today.wishwordrobe.application.UserLocationService;
 import today.wishwordrobe.firebase.FCMPushNotificationRequest;
+import today.wishwordrobe.infrastructure.UserLocationDocument;
 import today.wishwordrobe.presentation.dto.BroadcastJobStatus;
 import today.wishwordrobe.presentation.dto.FcmTokenRequest;
 import today.wishwordrobe.presentation.dto.PushNotificationRequest;
+import today.wishwordrobe.presentation.dto.UserLocationRequest;
+import today.wishwordrobe.presentation.dto.UserLocationResponse;
 import today.wishwordrobe.webpush.BroadcastJobService;
 import today.wishwordrobe.webpush.BroadcastJobService.JobView;
+import org.springframework.web.bind.annotation.PutMapping;
+
 
 @Slf4j
 @RestController
@@ -33,6 +40,7 @@ public class PushNotificationController {
     @Autowired
     private PushNotificationService pushNotificationService;
 
+   
     @Value("${webpush.public-key}")
     private String publicKey;
 
@@ -139,4 +147,6 @@ public class PushNotificationController {
         return pushNotificationService.unregisterAllFcmTokensByUserId(userId)
                 .then(Mono.just(ResponseEntity.ok("All FCM tokens unregistered for userId: " + userId)));
     }
+
+    
 }

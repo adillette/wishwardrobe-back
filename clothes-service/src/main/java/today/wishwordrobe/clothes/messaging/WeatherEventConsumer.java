@@ -31,7 +31,7 @@ public class WeatherEventConsumer {
     log.info("WeatherEvent 수신. userId={}, maxTemp={}, minTemp={}",
                 event.getUserId(), event.getMaxTemperature(), event.getMinTemperature());
 
-   Long userId = Long.parseLong(event.getUserId())             ;
+   Long userId = event.getUserId();
    //평균 기온 계산후 TempRange 변환
    int avgTemp= calAvgTemp(event);
 

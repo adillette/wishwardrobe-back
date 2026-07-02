@@ -29,7 +29,7 @@ public class NotificationConsumer {
   public void handleClothesMatchedEvent(ClothesMatchedEvent event) {
     outboxEventService.saveWithLock(
         event.getEventId(),
-        event.getUserId(),
+        String.valueOf(event.getUserId()),
         EVENT_TYPE,
         event)
         .flatMap(outboxEvent -> sendNotification(event, outboxEvent))
@@ -51,7 +51,7 @@ public class NotificationConsumer {
     String body = messageBuilder.buildBody(event);
   
     // // Mono<WebPushSendSummary> → Mono<Void>
-    return pushNotificationService.sendToUserWithChannelCheck(event.getUserId(), title, body)
+    return pushNotificationService.sendToUserWithChannelCheck(String.valueOf(event.getUserId()), title, body)
         .flatMap(result -> switch (result) {
           case SENT ->outboxEventService.markAsSent(outboxEvent);
           case NO_CHANNEL->outboxEventService.markAsNoChannel(outboxEvent, "등록된 채널 없음");

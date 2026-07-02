@@ -36,7 +36,7 @@ public class WeatherEventConsumerTest {
     void 정상_이벤트_수신시_추천결과_발행() {
         // given
         WeatherEvent event = new WeatherEvent();
-        event.setUserId("1");
+        event.setUserId(1L);
         event.setMaxTemperature(25.0);
         event.setMinTemperature(15.0);  // // avgTemp = 20 → TempRange.MILD 또는 해당 범위
         event.setSkyCondition("맑음");
@@ -67,7 +67,7 @@ public class WeatherEventConsumerTest {
     void 최고기온만_있을때_fallback_처리() {
         // given
         WeatherEvent event = new WeatherEvent();
-        event.setUserId("1");
+        event.setUserId(1L);
         event.setMaxTemperature(25.0);
         event.setMinTemperature(null);  // // null 케이스
         event.setFcmToken("test-fcm-token");
@@ -88,7 +88,7 @@ public class WeatherEventConsumerTest {
     void 기온_둘다_null이면_기본값20으로_처리() {
         // given
         WeatherEvent event = new WeatherEvent();
-        event.setUserId("1");
+        event.setUserId(1L);
         event.setMaxTemperature(null);
         event.setMinTemperature(null);
         event.setFcmToken("test-fcm-token");
