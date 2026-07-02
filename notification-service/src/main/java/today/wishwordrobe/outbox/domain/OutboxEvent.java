@@ -30,7 +30,7 @@ public class OutboxEvent {
   //"outbox:lock:{userId}:{date}:{eventId}" 형태로 사용
   // 사용자 단위로 락을 쪼개서 Lock Bottleneck 방지
   @Indexed
-  private String userId;
+  private Long userId;
 
 
   //eventType: 이벤트 종류 구분
@@ -59,7 +59,7 @@ public class OutboxEvent {
     private LocalDateTime processedAt;
   
     @Builder
-    public OutboxEvent(String eventId,String userId, String eventType, String payload){
+    public OutboxEvent(String eventId,Long userId, String eventType, String payload){
       this.eventId=eventId;
       this.userId=userId;
       this.eventType=eventType;

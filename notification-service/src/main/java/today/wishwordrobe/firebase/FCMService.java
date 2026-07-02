@@ -40,7 +40,7 @@ public class FCMService {
 
     private static final int MAX_DEVICES_PER_USER = 3;
 
-    public Mono<Boolean> hasActiveToken(String userId) {
+    public Mono<Boolean> hasActiveToken(Long userId) {
     return fcmtokenRepository
             .findByUserIdAndIsActive(userId, true)
             .hasElements();
@@ -192,15 +192,25 @@ public class FCMService {
                 );
     }
 
+    //구독 삭제
+    public Mono<Long> deleteInactiveFcmTokens(){
+        LocalDateTime threshold=LocalDateTime.now().minusDays(7);
+        return fcmtokenRepository.findByLastUsedAtBeforeAndIsActive(threshold,true)
+            .flatMap(doc->fcmtokenRepository.delete(doc).thenReturn(1L))
+            .reduce(0L,Long::sum)
+            .doOnSuccess(count->log.info("7일 FCM 토큰 만료 처리{} 건 삭제 완료",count));
+        
+    }
+
     /**
      * 4. 사용자당 최대 3개 디바이스 제한
      */
-    private Mono<Void> enforceDeviceLimit(String userId) {
+    private Mono<Void> enforceDeviceLimit(Long userId) {
         return fcmtokenRepository.countByUserIdAndIsActive(userId, true)
                 .flatMap(count -> deleteOldestIfExceedsLimit(userId, count));
     }
 
-    private Mono<Void> deleteOldestIfExceedsLimit(String userId, long count) {
+    private Mono<Void> deleteOldestIfExceedsLimit(Long userId, long count) {
         if (count <= MAX_DEVICES_PER_USER) {
             return Mono.empty();
         }
@@ -216,7 +226,7 @@ public class FCMService {
     /**
      * 사용자별로 메시지 전송
      */
-    public Flux<String> sendMessageToUser(String userId, String title, String body) {
+    public Flux<String> sendMessageToUser(Long userId, String title, String body) {
         return fcmtokenRepository.findByUserIdAndIsActive(userId, true)
                 .doOnSubscribe(s -> log.info("사용자 FCM 메시지 전송 시작 - userId: {}", userId))
                 .flatMap(fcmToken -> {

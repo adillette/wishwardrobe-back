@@ -38,9 +38,9 @@ public class DistributedLockService {
 
    */
 
-  private String buildLockKey(String userId, String eventId){
+  private String buildLockKey(Long userId, String eventId){
     String today=LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyMMdd"));
-    return LOCK_PREFIX+userId+ ":"+ today+":"+eventId;
+    return LOCK_PREFIX+String.valueOf(userId)+ ":"+ today+":"+eventId;
   }
 
   //trylock: redis set nx ex(atomic 명령어)
@@ -59,7 +59,7 @@ public class DistributedLockService {
     " else return 0 end",
     Boolean.class);
 
-  public Mono<String> tryLock(String userId, String eventId){
+  public Mono<String> tryLock(Long userId, String eventId){
     String lockKey = buildLockKey(userId, eventId);
     String lockValue= UUID.randomUUID().toString();// 소유권 식별자
 
@@ -72,7 +72,7 @@ public class DistributedLockService {
               }); 
   }
 
-  public Mono<Boolean> releaseLock(String userId, String eventId, String lockValue){
+  public Mono<Boolean> releaseLock(Long userId, String eventId, String lockValue){
     String lockKey = buildLockKey(userId, eventId);
      return reactiveRedisTemplate.execute(
             RELEASE_SCRIPT,

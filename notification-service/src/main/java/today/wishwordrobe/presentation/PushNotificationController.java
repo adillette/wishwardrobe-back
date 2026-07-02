@@ -140,10 +140,11 @@ public class PushNotificationController {
     // 특정 사용자의 모든 FCM 토큰 삭제 (전체 로그아웃)
     @PostMapping("/fcm/unregister-user")
     public Mono<ResponseEntity<String>> unregisterAllFcmTokens(@RequestBody Map<String, String> request) {
-        String userId = request.get("userId");
-        if (userId == null) {
+        String userIdParam = request.get("userId");
+        if (userIdParam == null) {
             return Mono.just(ResponseEntity.badRequest().body("userId is required"));
         }
+        Long userId = Long.valueOf(userIdParam);
         return pushNotificationService.unregisterAllFcmTokensByUserId(userId)
                 .then(Mono.just(ResponseEntity.ok("All FCM tokens unregistered for userId: " + userId)));
     }

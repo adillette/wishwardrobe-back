@@ -26,7 +26,7 @@ public class WebPushSubscriptionDocument {
     private String auth;
 
     @Indexed
-    private String userId;
+    private Long userId;
 
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
@@ -36,7 +36,7 @@ public class WebPushSubscriptionDocument {
     @Builder.Default
     private boolean isActive = true;
 
-    public static WebPushSubscriptionDocument from(WebPushSubscription subscription, String userId) {
+    public static WebPushSubscriptionDocument from(WebPushSubscription subscription, Long userId) {
         if (subscription == null || subscription.getEndpoint() == null) {
             throw new IllegalArgumentException("subscription/endpoint is required");
         }

@@ -25,7 +25,7 @@ public class FcmTokenDocument {
     private String token;  // FCM 토큰 자체가 PK (중복 방지)
 
     @Indexed
-    private String userId;  // 이 토큰이 어느 사용자에게 속하는지
+    private Long userId;  // 이 토큰이 어느 사용자에게 속하는지
 
     private String deviceId;  // 선택: 같은 유저의 여러 디바이스 구분
 

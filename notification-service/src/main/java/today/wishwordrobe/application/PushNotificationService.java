@@ -213,7 +213,7 @@ public class PushNotificationService {
     }
 
     public Mono<Void> saveSubscription(Map<String, Object> subscriptionMap) {
-        String userId = (String) subscriptionMap.get("userId");
+        Long userId = Long.valueOf(String.valueOf(subscriptionMap.get("userId")));
 
         WebPushSubscription subscription = new WebPushSubscription();
 
@@ -244,13 +244,13 @@ public class PushNotificationService {
     }
 
     // 사용자 전체 토큰 삭제
-    public Mono<Void> unregisterAllFcmTokensByUserId(String userId) {
+    public Mono<Void> unregisterAllFcmTokensByUserId(Long userId) {
         return fcmTokenRepository.deleteByUserId(userId)
                 .doOnSuccess(v -> log.info("사용자 FCM 토큰 전체 삭제: userId={}", userId));
     }
 
     //유저별 전송 메서드
-    public Mono<ChannelSendResult> sendToUserWithChannelCheck(String userId, String title, String body){
+    public Mono<ChannelSendResult> sendToUserWithChannelCheck(Long userId, String title, String body){
         WebPushNotificationRequest request= WebPushNotificationRequest.builder()
                                                 .title(title)
                                                 .message(body)
@@ -359,7 +359,7 @@ public class PushNotificationService {
                 .doOnSuccess(v -> log.info("WebPush 구독 해제: endpoint={}", endpoint));
     }
 
-    public Mono<Void> unregisterAllWebPushByUserId(String userId) {
+    public Mono<Void> unregisterAllWebPushByUserId(Long userId) {
         return webPushSubscriptionRepository.deleteByUserId(userId)
                 .doOnSuccess(v -> log.info("사용자 WebPush 구독 전체 삭제: userId={}", userId));
     }

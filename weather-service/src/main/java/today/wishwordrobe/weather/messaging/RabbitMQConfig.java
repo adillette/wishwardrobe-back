@@ -15,10 +15,12 @@ public class RabbitMQConfig {
   public static final String WEATHER_EXCHANGE="weather.exchange";
   
   //clothes-service가 구독하는 큐
-  public static final String WWEATHER_QUEUE = "weather.clothes.queue";
+  public static final String WEATHER_QUEUE = "weather.clothes.queue";
 
   //routing key : weather.exchange-> weather.clothes.queue 라우팅
-  public static final String WEATHER_ROUTING_KEY="weather.fetchd";
+  public static final String WEATHER_ROUTING_KEY="weather.fetched";
+
+
 
   @Bean
   public TopicExchange weatherExchange(){
@@ -28,7 +30,7 @@ public class RabbitMQConfig {
   //durable=true: rabbitmq 재시작 해도 큐유지
   @Bean
   public Queue weatherQueue(){
-    return new Queue(WWEATHER_QUEUE,true);
+    return new Queue(WEATHER_QUEUE,true);
   }
 
   @Bean

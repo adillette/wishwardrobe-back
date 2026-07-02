@@ -37,7 +37,7 @@ public class OutboxEventService {
     // 분산락 통과해도 DB 레벨 atomic 보장
     // Redis 장애 같은 극단적 상황에서도 중복 저장 불가
 
-  public Mono<OutboxEvent> saveWithLock(String eventId, String userId, String eventType, Object payload){
+  public Mono<OutboxEvent> saveWithLock(String eventId, Long userId, String eventType, Object payload){
     return Mono.fromCallable(()->objectMapper.writeValueAsString(payload))
     .onErrorMap(JsonProcessingException.class,
       e->new RuntimeException("payload 직렬화 실패: "+e.getMessage())

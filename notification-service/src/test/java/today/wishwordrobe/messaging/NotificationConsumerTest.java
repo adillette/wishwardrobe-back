@@ -40,7 +40,7 @@ class NotificationConsumerTest {
     void setUp() {
         pendingOutbox = OutboxEvent.builder()
                 .eventId("evt-001")
-                .userId("123")
+                .userId(123L)
                 .eventType("CLOTHES_MATCHED")
                 .payload("{}")
                 .build();
@@ -67,10 +67,10 @@ class NotificationConsumerTest {
         // subscribe() 내부가 비동기이므로 짧게 대기 후 검증
         awaitAsync();
 
-        verify(outboxEventService).saveWithLock(eq("evt-001"), eq("123"),
+        verify(outboxEventService).saveWithLock(eq("evt-001"), eq(123L),
                 eq("CLOTHES_MATCHED"), any());
         verify(pushNotificationService).sendToUserWithChannelCheck(
-                eq("123"), anyString(), anyString());
+                eq(123L), anyString(), anyString());
         verify(outboxEventService).markAsSent(pendingOutbox);
     }
 

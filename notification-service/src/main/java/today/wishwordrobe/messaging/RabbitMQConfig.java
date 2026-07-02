@@ -11,6 +11,8 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class RabbitMQConfig {
+
+   
   //clothes-service가 발행하는 exchange
   public static final String CLOTHES_EXCHANGE="clothes.exchange";
   
@@ -19,6 +21,15 @@ public class RabbitMQConfig {
   public static final String NOTIFICATION_QUEUE="clothes.notification.queue";
 
   public static final String CLOTHES_ROUTING_KEY="clothes.matched";
+
+  
+  //스케줄러 -> weather-service 요청용
+  public static final String WEATHER_REQUEST_EXCHANGE = "weather.request.exchange";
+  public static final String WEATHER_REQUEST_QUEUE ="weather.request.queue";
+  public static final String WEATHER_REQUEST_ROUTING_KEY ="weather.request";
+
+
+ 
 
   @Bean
   public TopicExchange clothesExchange(){
@@ -39,6 +50,26 @@ public class RabbitMQConfig {
               .to(clothesExchange())
               .with(CLOTHES_ROUTING_KEY);
             }
+  //weather.request.exchange 발행용
+  @Bean
+  public TopicExchange weatherRequestExchange(){
+    return new TopicExchange(WEATHER_REQUEST_EXCHANGE);
+  }
+   // weather-service(Consumer)가 구독할 큐
+    // 단 Consumer 쪽에서도 선언하므로 멱등 동작
+  @Bean
+  public Queue weatherRequestQueue() {
+        return new Queue(WEATHER_REQUEST_QUEUE, true);
+  }
+
+
+  @Bean
+  public Binding weatherRequestBinding(){
+    return BindingBuilder
+            .bind(weatherRequestQueue())
+            .to(weatherRequestExchange())
+            .with(WEATHER_REQUEST_ROUTING_KEY);
+  }
 
   @Bean
   public Jackson2JsonMessageConverter messageConverter(){

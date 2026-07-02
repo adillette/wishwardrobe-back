@@ -34,7 +34,7 @@ class PushNotificationServiceTest {
 
     PushNotificationService service;
 
-    private static final String USER_ID = "user-123";
+    private static final Long USER_ID = 123L;
     private static final String TITLE = "오늘의 날씨 맑음 | 맑음";
     private static final String BODY = "최고 28°C / 최저 18°C\n추천 옷: 반팔";
 

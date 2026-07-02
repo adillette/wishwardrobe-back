@@ -23,6 +23,6 @@ public interface OutboxEventRepository extends ReactiveMongoRepository<OutboxEve
 
   // 특정 userId의 미처리 건 조회
   //사용자별 알림 현황 확인용
-  Flux<OutboxEvent> findByUserIdAndStatus(String userId, OutboxStatus status);
+  Flux<OutboxEvent> findByUserIdAndStatus(Long userId, OutboxStatus status);
 
 } 

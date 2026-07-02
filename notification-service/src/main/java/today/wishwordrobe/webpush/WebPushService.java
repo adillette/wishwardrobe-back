@@ -46,12 +46,12 @@ public class WebPushService {
         this.pushAsyncService = pushAsyncService;
         this.asyncHttpClient = asyncHttpClient;
     }
-    public Mono<Boolean> hasActiveSubscription(String userId) {
+    public Mono<Boolean> hasActiveSubscription(Long userId) {
     return webPushSubscriptionRepository
             .findByUserIdAndIsActive(userId, true)
             .hasElements();
     }
-    public Mono<WebPushSubscriptionDocument> saveWebPushSubscription(String userId, WebPushSubscription subscription) {
+    public Mono<WebPushSubscriptionDocument> saveWebPushSubscription(Long userId, WebPushSubscription subscription) {
         String endpoint = subscription.getEndpoint();
         // 엔드 포인트를 구독의 고유 식별자로 사용
         return webPushSubscriptionRepository.findById(endpoint)
@@ -82,7 +82,7 @@ public class WebPushService {
                 .doOnSuccess(saved -> log.info("WebPush 구독 저장 완료: userId={}, endpoint={}", userId, endpoint));
     }
 
-    private Mono<Void> enforceWebPushDeviceLimit(String userId) {
+    private Mono<Void> enforceWebPushDeviceLimit(Long userId) {
         return webPushSubscriptionRepository
                 .findByUserIdAndIsActiveOrderByLastUsedAtAsc(userId, true)
                 .skip(MAX_DEVICES_PER_USER)
@@ -149,7 +149,7 @@ public class WebPushService {
     //sendToUser() 반환 타입- 구독 전체에 대한 집계 결과
     //consumer는 userId만 넘김 — 구독 조회/전송/오류처리 모두 여기서 처리
     // Mono<WebPushSendSummary> 반환 — 성공/만료/실패 건수를 Consumer에서 로그로 확인 가능
-    public Mono<WebPushSendSummary> sendToUser(String userId, WebPushNotificationRequest request){
+    public Mono<WebPushSendSummary> sendToUser(Long userId, WebPushNotificationRequest request){
         return webPushSubscriptionRepository
                 .findByUserIdAndIsActive(userId, true)
                 //userId로 활성 구독 전체 조회
@@ -180,15 +180,15 @@ public class WebPushService {
     }
 
     // 구독 전체 삭제
-    public Mono<Void> deleteByUserId(String userId) {
+    public Mono<Void> deleteByUserId(Long userId) {
         return webPushSubscriptionRepository.deleteByUserId(userId)
                 .doOnSuccess(v -> log.info("WebPush 구독 전체 삭제: userId={}", userId));
     }
 
     // 7일 미사용 구독 정리
     public Mono<Long> deleteInactiveSubscriptions() {
-        LocalDateTime threshod = LocalDateTime.now().minusDays(7);
-        return webPushSubscriptionRepository.findByLastUsedAtBeforeAndIsActive(threshod, true)
+        LocalDateTime threshold = LocalDateTime.now().minusDays(7);
+        return webPushSubscriptionRepository.findByLastUsedAtBeforeAndIsActive(threshold, true)
                 .flatMap(doc -> webPushSubscriptionRepository.delete(doc).thenReturn(1L))
                 .reduce(0L, Long::sum)
                 .doOnSuccess(count -> log.info("WebPush 만료 구독 {}건 삭제 완료", count));

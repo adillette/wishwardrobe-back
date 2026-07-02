@@ -44,7 +44,7 @@ public class WeatherForecastDTO {
     private LocalDate baseDate;
     private LocalTime baseTime;
 
-    private String userId;
+    private Long userId;
     private String fcmToken;
 
     private String webPushEndpoint;  // // 브라우저 푸시 서비스 URL
