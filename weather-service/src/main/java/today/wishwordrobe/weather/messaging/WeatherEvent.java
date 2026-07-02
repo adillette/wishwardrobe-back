@@ -1,6 +1,7 @@
 package today.wishwordrobe.weather.messaging;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -9,6 +10,7 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
+@Builder
 public class WeatherEvent {
 
   //eventId 이 이벤트의 고유 식별자

@@ -4,9 +4,14 @@ import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.TopicExchange;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+
+import com.rabbitmq.client.impl.AMQImpl.Exchange.Bind;
 
 @Configuration
 public class RabbitMQConfig {
@@ -20,6 +25,11 @@ public class RabbitMQConfig {
   //routing key : weather.exchange-> weather.clothes.queue 라우팅
   public static final String WEATHER_ROUTING_KEY="weather.fetched";
 
+
+  //스케줄러로부터 요청 수신용
+  public static final String WEATHER_REQUEST_EXCHANGE="weather.request.exchange";
+  public static final String WEATHER_REQUEST_QUEUE = "weather.request.queue";
+  public static final String WEATHER_REQUEST_ROUTING_KEY = "weather.request";
 
 
   @Bean
@@ -40,7 +50,24 @@ public class RabbitMQConfig {
           .to(weatherExchange())
           .with(WEATHER_ROUTING_KEY);
         }
+  @Bean
+  public TopicExchange weatherRequestExchange(){
+    return new TopicExchange(WEATHER_REQUEST_EXCHANGE);
+  }
 
+  @Bean
+  public Queue weatherRequestQueue(){
+    return new Queue(WEATHER_REQUEST_QUEUE,true);
+
+  }
+
+  @Bean
+  public Binding weatherRequestBinding(){
+    return BindingBuilder
+            .bind(weatherRequestQueue())
+            .to(weatherRequestExchange())
+            .with(WEATHER_REQUEST_ROUTING_KEY);
+          }
   //jackson2jsonmessageconverter 
   //java객체를 json 직렬화
   //weather 이벤트-> json-> rabbitmq 메시지로
@@ -49,6 +76,12 @@ public class RabbitMQConfig {
     return new Jackson2JsonMessageConverter();
   }
 
-  
+  @Bean
+  public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory) {
+    RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory);
+    rabbitTemplate.setMessageConverter(messageConverter());
+    return rabbitTemplate;
+}
+
 
 }
