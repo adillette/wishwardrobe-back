@@ -4,6 +4,9 @@ import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
 import lombok.extern.slf4j.Slf4j;
+
+
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.Resource;
@@ -28,9 +31,11 @@ public class FirebaseConfig {
             FirebaseApp.initializeApp(options);
             log.info("Firebase initialized successfully");
 
+
+
         } catch (Exception e){
             log.error("Failed to initialize Firebase", e);
-            e.printStackTrace();
+            throw new IllegalStateException("Firebase 초기화 실패 - 앱 기동 중단", e);
         }
     }
 
