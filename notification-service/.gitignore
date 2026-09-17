@@ -36,12 +36,6 @@ out/
 ### VS Code ###
 .vscode/
 
-### Gradle ###
-.gradle/
-gradle/
-gradlew
-gradlew.bat
-
 ### Secrets ###
 service-account-key.json
 .env

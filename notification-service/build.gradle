@@ -4,9 +4,21 @@ plugins {
     id 'io.spring.dependency-management' version '1.1.7'
 }
 
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+tasks.withType(Test) {
+    systemProperty "file.encoding", "UTF-8"
+}
+
+
+
 group = 'today.wishwordrobe'
 version = '1.0.0'
-sourceCompatibility = '21'
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+}
 
 configurations {
     compileOnly {

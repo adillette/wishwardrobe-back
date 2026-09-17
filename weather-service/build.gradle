@@ -6,7 +6,9 @@ plugins {
 
 group = 'today.wishwordrobe'
 version = '1.0.0'
-sourceCompatibility = '21'
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+}
 
 configurations {
     compileOnly {
