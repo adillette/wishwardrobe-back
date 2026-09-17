@@ -2,13 +2,17 @@ package today.wishwordrobe.test;
 
 import nl.martijndwars.webpush.PushService;
 import org.apache.http.HttpResponse;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
+
+
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 
-@SpringBootTest
+@Disabled ("실제 FCM 서버로 네트워크 호출하는 수동 검증용 — CI/빌드에서 자동 실행 금지")
+@Slf4j 
 public class WebPushExceptionTest {
     
     @Autowired
@@ -26,53 +30,37 @@ public class WebPushExceptionTest {
                     "test message".getBytes()  // payload (byte[])
                 );
             
-            System.out.println("\n========================================");
-            System.out.println("=== 전송 시작 ===");
-            System.out.println("========================================\n");
-            
+          
             HttpResponse response = pushService.send(notification);
             
             int statusCode = response.getStatusLine().getStatusCode();
             String reasonPhrase = response.getStatusLine().getReasonPhrase();
-            
-            System.out.println("\n========================================");
-            System.out.println("=== 전송 완료 (예외 안 던짐) ===");
-            System.out.println("Status Code: " + statusCode);
-            System.out.println("Reason: " + reasonPhrase);
-            System.out.println("========================================\n");
-            
+            log.info("HTTP Status Code: {}", statusCode);
+            log.info("reasonPhrase: {}", reasonPhrase);
+           
             // 결론
             if (statusCode == 410) {
-                System.out.println("✅ 결론: 410 Gone 응답이 왔지만 예외를 던지지 않음");
-                System.out.println("✅ HttpResponse 객체로 반환됨");
+                log.info("✅ 결론: 410 Gone 응답이 왔지만 예외를 던지지 않음");
+                log.info("✅ HttpResponse 객체로 반환됨");
             } else if (statusCode >= 400) {
-                System.out.println("✅ 결론: " + statusCode + " 응답이 왔지만 예외를 던지지 않음");
-                System.out.println("✅ HttpResponse 객체로 반환됨");
+                log.info("✅ 결론: {} 응답이 왔지만 예외를 던지지 않음", statusCode);
+                log.info("✅ HttpResponse 객체로 반환됨");
             } else {
-                System.out.println("의외의 성공 응답: " + statusCode);
+                log.info("의외의 성공 응답: {}", statusCode);
             }
             
         } catch (IOException e) {
-            System.out.println("\n========================================");
-            System.out.println("=== IOException 발생 ===");
-            System.out.println("메시지: " + e.getMessage());
-            System.out.println("========================================\n");
-            
-            System.out.println("❌ 결론: 에러 응답 시 IOException을 던짐");
-            
+            log.error("결론: 에러 응답 시 IOException을 던짐", e);
+
             if (e.getMessage() != null && e.getMessage().contains("410")) {
-                System.out.println("❌ IOException 메시지에 '410' 포함됨");
+                log.error(" IOException 메시지에 '410' 포함됨");
             }
             
             e.printStackTrace();
             
         } catch (Exception e) {
-            System.out.println("\n========================================");
-            System.out.println("=== 기타 예외 발생 ===");
-            System.out.println("예외 타입: " + e.getClass().getName());
-            System.out.println("메시지: " + e.getMessage());
-            System.out.println("========================================\n");
-            
+           
+            log.error("예외 발생:{}", e.getMessage(), e);
             e.printStackTrace();
         }
     }
