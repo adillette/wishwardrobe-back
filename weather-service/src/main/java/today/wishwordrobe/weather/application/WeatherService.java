@@ -20,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 import today.wishwordrobe.weather.domain.Geographic;
+import today.wishwordrobe.weather.domain.WeatherTotal;
 import today.wishwordrobe.weather.dto.AirQualityDto;
 import today.wishwordrobe.weather.dto.AirQualityResponse;
 import today.wishwordrobe.weather.dto.IntegratedWeatherDto;
@@ -28,6 +29,7 @@ import today.wishwordrobe.weather.dto.UVIndexResponse;
 import today.wishwordrobe.weather.dto.VillageForecastResponse;
 import today.wishwordrobe.weather.dto.WeatherForecastDTO;
 import today.wishwordrobe.weather.dto.WeatherForecastDTO.WeatherForecastDTOBuilder;
+import today.wishwordrobe.weather.infrastructure.WeatherRepository;
 import today.wishwordrobe.weather.util.LocationMapper;
 import today.wishwordrobe.weather.util.WeatherGridConverter;
 import today.wishwordrobe.weather.util.WeatherGridConverter.GridCoordinate;
@@ -44,6 +46,7 @@ public class WeatherService {
     private final WebClient airQualityClient;
     private final WebClient uvClient;
     private final LocationMapper locationMapper;
+    private final WeatherRepository weatherRepository;
 
     
     private static final String LOCATION_JSON_PATH = "static/location_data.json";
@@ -120,7 +123,7 @@ public class WeatherService {
                 }
             }
         } catch (IOException e) {
-            log.error("지역 정보 파일 읽기 오류: {}", e.getMessage(), e);
+            log.error("지역 정보 파일 읽기 오류: {}", e.getMessage());
         }
         return null;
 
@@ -245,7 +248,7 @@ public class WeatherService {
                 // 날씨 API - Optional로 감싸서 실패 시 Optional.empty() 반환
                 weatherClient.getVillageForecast(geoLocation)
                         .map(response -> Optional.of(convertToWeatherForecastDTO(response, geoLocation)))
-                        .doOnError(e -> log.error("날씨 API 호출 실패: {}", e.getMessage()))
+                        .doOnError(e -> log.error("날씨 API 호출 실패: {}", e))
                         .onErrorReturn(Optional.empty()),
 
                 // 미세먼지 API - Optional로 감싸서 실패 시 Optional.empty() 반환
@@ -278,6 +281,10 @@ public class WeatherService {
                 .doOnSuccess(dto -> {
                     long totalTime = System.currentTimeMillis() - startTime;
                     log.info("통합 날씨 정보 병렬 조회 완료: {} (총 {}ms)", location, totalTime);
+
+                    if (dto.getWeather() != null) {
+                        saveWeatherForecastToMongoDB(convertToWeatherTotal(dto, geoLocation));
+                    }
                 })
                 .doOnError(error -> log.error("통합 날씨 정보 병렬 조회 실패: {}", location, error));
     }
@@ -312,7 +319,7 @@ public class WeatherService {
                 // 날씨 API - Optional로 감싸서 실패 시 Optional.empty() 반환
                 weatherClient.getVillageForecast(geoLocation)
                         .map(response -> Optional.of(convertToWeatherForecastDTO(response, geoLocation)))
-                        .doOnError(e -> log.error("날씨 API 호출 실패: {}", e.getMessage()))
+                        .doOnError(e -> log.error("날씨 API 호출 실패: {}",  e))
                         .onErrorReturn(Optional.empty()),
 
                 // 미세먼지 API - Optional로 감싸서 실패 시 Optional.empty() 반환
@@ -325,7 +332,7 @@ public class WeatherService {
                                         ex.getStatusCode(),
                                         ex.getResponseBodyAsString()); // 이게 핵심
                             } else {
-                                log.error("미세먼지 API 호출 실패: {}", e.getMessage());
+                                log.error("미세먼지 API 호출 실패: {}",  e);
                             }
                         })
                         .onErrorReturn(Optional.empty()),
@@ -333,7 +340,7 @@ public class WeatherService {
                 // 자외선 API - Optional로 감싸서 실패 시 Optional.empty() 반환
                 weatherClient.getUVIndex(locationInfo.areaNo())
                         .map(dto -> Optional.ofNullable(convertToUVIndexDto(dto)))
-                        .doOnError(e -> log.error("자외선 API 호출 실패: {}", e.getMessage()))
+                        .doOnError(e -> log.error("자외선 API 호출 실패: {}", e))
                         .onErrorReturn(Optional.empty()))
                 .map(tuple -> IntegratedWeatherDto.builder()
                         .weather(tuple.getT1().orElse(null)) // 날씨 (실패 시 null)
@@ -452,6 +459,44 @@ public class WeatherService {
         if (index <= 10)
             return "가능한 실내 활동 권장, 외출 시 완전한 차단 필수";
         return "오전 10시~오후 3시 외출 자제, 긴팔+모자+선크림 필수";
+    }
+
+    // 통합 날씨 조회 결과를 WeatherTotal로 변환
+    private WeatherTotal convertToWeatherTotal(IntegratedWeatherDto dto, Geographic location) {
+        WeatherForecastDTO weather = dto.getWeather();
+
+        return WeatherTotal.builder()
+                .region(location.getCountry())
+                .province(location.getProvince())
+                .county(location.getCounty())
+                .district(location.getDistrict())
+                .areaCode(location.getAreaCode())
+                .gridX(location.getGridX())
+                .gridY(location.getGridY())
+                .forecastDate(weather.getForecastDate())
+                .forecastTime(weather.getForecastTime())
+                .maxTemperature(weather.getMaxTemperature())
+                .minTemperature(weather.getMinTemperature())
+                .humidity(weather.getHumidity())
+                .windDirection(weather.getWindDirection())
+                .precipitationProbability(weather.getPrecipitationProbability())
+                .snowfall(weather.getSnowfall())
+                .skyCondition(weather.getSkyCondition())
+                .precipitationType(weather.getPrecipitationType())
+                .baseDate(weather.getBaseDate())
+                .baseTime(weather.getBaseTime())
+                .airQuality(dto.getAirQuality())
+                .uvIndex(dto.getUvIndex())
+                .createdAt(java.time.LocalDateTime.now())
+                .build();
+    }
+
+    //날씨 mongo db에 저장
+    private String saveWeatherForecastToMongoDB(WeatherTotal weather){
+        // MongoDB에 저장하는 로직 구현
+        weatherRepository.save(weather);
+        
+        return "MongoDB에 날씨 정보 저장 완료";
     }
 
 }
