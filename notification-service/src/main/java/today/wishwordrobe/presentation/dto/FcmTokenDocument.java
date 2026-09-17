@@ -17,7 +17,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Document(collection = "fcm_tokens")
+@Document(collection = "FcmTokenDocument")
 public class FcmTokenDocument {
 
    
