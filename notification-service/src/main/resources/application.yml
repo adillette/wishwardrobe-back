@@ -22,6 +22,13 @@ spring:
   webflux:
     base-path: /api
 
+
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: 5672
+    username: guest
+    password: guest
+
 # Firebase Configuration
 firebase:
   config-path: file:/app/service-account-key.json
@@ -66,3 +73,8 @@ management:
       #   process: false 
       #   executor: false
       #   logback: false
+notification:
+  daily:
+    enabled: true
+    lat: 37.5665
+    lon: 126.9780
