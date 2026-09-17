@@ -2,13 +2,13 @@ version: '3.8'
 
 services:
 
-  # RabbitMQ - 메시지 브로커
+  # RabbitMQ 
   rabbitmq:
     image: rabbitmq:3-management
     container_name: rabbitmq
     ports:
-      - "5672:5672"    # // AMQP 프로토콜 포트 (서비스 간 통신)
-      - "15672:15672"  # // 관리 UI 포트 (브라우저에서 확인용)
+      - "5672:5672"    
+      - "15672:15672"  
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
@@ -20,7 +20,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-      # // healthcheck: 서비스들이 RabbitMQ 뜨기 전에 연결 시도하는 것 방지
+      
   redis:
     image: redis:7-alpine
     container_name: redis
@@ -58,14 +58,14 @@ services:
       - .env
     environment:
       RABBITMQ_HOST: rabbitmq
-      # // docker-compose 내부에서는 서비스명이 호스트명
-      # // application.yml의 ${RABBITMQ_HOST:localhost}가 이 값을 참조
+      
+      
     volumes:
       - clothes-uploads:/app/uploads
     depends_on:
       rabbitmq:
         condition: service_healthy
-        # // RabbitMQ 완전히 뜬 후에 clothes-service 시작
+       
     networks:
       - wishwordrobe-network
     restart: unless-stopped
@@ -81,6 +81,9 @@ services:
       - .env
     environment:
       RABBITMQ_HOST: rabbitmq
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -99,6 +102,9 @@ services:
       - .env
     environment:
       RABBITMQ_HOST: rabbitmq
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     volumes:
       - ./notification-service/src/main/resources/service-account-key.json:/app/service-account-key.json:ro
     depends_on:
@@ -110,7 +116,7 @@ services:
 
   wishwardrobe-front:
     build:
-      context: /home/ubuntu/wishwardrobe-front
+      context: ../wishwardrobe-front
       args:
         - VUE_APP_KAKAO_JS_KEY=${VUE_APP_KAKAO_JS_KEY}
       dockerfile: Dockerfile
