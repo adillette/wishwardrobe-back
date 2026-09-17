@@ -1,4 +1,0 @@
-### Secrets ###
-.env
-*.env
-service-account-key.json
