@@ -15,7 +15,7 @@ import java.util.List;
 
 
 
-@Repository
+@Repository 
 public interface ClothesRepository extends JpaRepository<Clothes,Long> {
 
     /**
@@ -36,7 +36,7 @@ public interface ClothesRepository extends JpaRepository<Clothes,Long> {
 
     @Modifying
     @Query(value=" INSERT INTO FILE_INFO(NEW_FILE_NAME, FILE_PATH, USER_ID) "+
-    " VALUES(:fileName, :filePath, :userId",nativeQuery = true)
+    " VALUES(:fileName, :filePath, :userId)",nativeQuery = true)
 
     void saveFilePath(@Param("fileName") String fileName,
                       @Param("filePath") String filePath,
