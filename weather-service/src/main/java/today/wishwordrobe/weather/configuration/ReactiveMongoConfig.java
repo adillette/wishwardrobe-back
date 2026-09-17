@@ -3,7 +3,6 @@ package today.wishwordrobe.weather.configuration;
 
 import com.mongodb.reactivestreams.client.MongoClients;
 
-import lombok.Value;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -12,7 +11,7 @@ import org.springframework.data.mongodb.repository.config.EnableReactiveMongoRep
 
 @Configuration
 @EnableReactiveMongoRepositories(
-        basePackages = "Today.WishWordrobe.weather",
+        basePackages = "today.wishwordrobe.weather",
         reactiveMongoTemplateRef = "reactiveMongoTemplate"
 )
 public class ReactiveMongoConfig  {
