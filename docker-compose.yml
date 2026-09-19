@@ -91,6 +91,7 @@ services:
       - wishwordrobe-network
     restart: unless-stopped
 
+#metric와 포트 분리한 이유 보안 격리와 트래픽 분리
   notification-service:
     build:
       context: ./notification-service
@@ -98,6 +99,8 @@ services:
     container_name: notification-service
     ports:
       - "8083:8083"
+      - "9091:9091"
+    cpus: "0.5"
     env_file:
       - .env
     environment:
