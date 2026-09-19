@@ -4,6 +4,7 @@ package today.wishwordrobe.firebase;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,10 +12,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.google.api.core.ApiFuture;
-import com.google.api.core.ApiFutureCallback;
-import com.google.api.core.ApiFutures;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.firebase.messaging.AndroidConfig;
 import com.google.firebase.messaging.AndroidNotification;
 import com.google.firebase.messaging.FirebaseMessaging;
@@ -22,10 +19,11 @@ import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;
 import com.google.firebase.messaging.Notification;
 
-import io.netty.handler.timeout.TimeoutException;
+import java.util.concurrent.TimeoutException; 
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import today.wishwordrobe.infrastructure.FcmTokenRepository;
 import today.wishwordrobe.presentation.dto.FcmTokenDocument;
 import today.wishwordrobe.presentation.dto.FcmTokenRequest;
@@ -48,13 +46,15 @@ public class FCMService {
 
 
     public Mono<String> sendPushNotification(FCMPushNotificationRequest request) {
+        return Mono.fromCallable(() -> {
             Message message = prepareMessage(request);
-            return sendAsync(message);
+            return sendAndGetResponse(message);
+        })
+                .subscribeOn(Schedulers.boundedElastic());
     }
 
     public Mono<String> sendTopicMessage(FCMPushNotificationRequest request) {
-        
-            long start = System.currentTimeMillis();
+        return Mono.fromCallable(() -> {
             Message.Builder builder = Message.builder()
                     .setNotification(Notification.builder()
                             .setTitle(request.getTitle())
@@ -67,15 +67,14 @@ public class FCMService {
             }
 
             Message message = builder.build();
-            return sendAsync(message)
-                    .doOnSuccess(result->{
-                        long elapsed= System.currentTimeMillis()-start;
-                    });
-                
+            return sendAndGetResponse(message);
+        })
+                .subscribeOn(Schedulers.boundedElastic());
     }
 
     public Mono<String> sendTokenMessage(FCMPushNotificationRequest request) {
-               Message.Builder builder = Message.builder()
+        return Mono.fromCallable(() -> {
+            Message.Builder builder = Message.builder()
                     .setNotification(Notification.builder()
                             .setTitle(request.getTitle())
                             .setBody(request.getMessage())
@@ -87,18 +86,16 @@ public class FCMService {
             }
 
             Message message = builder.build();
-            return sendAsync(message)             
+            return sendAndGetResponse(message);
+        })
+                .subscribeOn(Schedulers.boundedElastic())
                 .flatMap(response ->
                     // 전송 성공 시 lastUsedAt 업데이트
                     updateLastUsedAt(request.getToken()).thenReturn(response)
                 )
                 .onErrorResume(ExecutionException.class, e ->
-                handleExecutionException(request.getToken(), e)
-                )
-                .onErrorResume(TimeoutException.class,e->{
-                    log.warn("FCM SDK 타임아웃 token={}",request.getToken());
-                    return Mono.error(e);
-                });
+                    handleExecutionException(request.getToken(), e)
+                );
     }
 
     private Message prepareMessage(FCMPushNotificationRequest request) {
@@ -139,21 +136,12 @@ public class FCMService {
                 .build();
     }
 
-    private Mono<String> sendAsync(Message message) {
-    return Mono.create(sink -> {
-        ApiFuture<String> apiFuture = FirebaseMessaging.getInstance().sendAsync(message);
-        ApiFutures.addCallback(apiFuture, new ApiFutureCallback<String>() {
-            @Override
-            public void onSuccess(String result) {
-                sink.success(result);
-            }
-            @Override
-            public void onFailure(Throwable t) {
-                sink.error(t);
-            }
-        }, MoreExecutors.directExecutor());
-    });
-}
+    private String sendAndGetResponse(Message message)
+            throws InterruptedException, ExecutionException, java.util.concurrent.TimeoutException {
+        return FirebaseMessaging.getInstance()
+                .sendAsync(message)
+                .get();
+    }
 
     // ================================================================
     // 구독 Lifecycle 관리
@@ -257,7 +245,7 @@ public class FCMService {
         } else {
             log.error("FCM 메시지 전송 실행 오류 - token: {}", token, e);
         }
-        return Mono.empty();
+        return Mono.error(e);//empty대신 에러를 그대로 저장
     }
 
     /**
