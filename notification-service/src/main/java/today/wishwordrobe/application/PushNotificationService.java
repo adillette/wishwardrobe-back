@@ -188,6 +188,10 @@ public class PushNotificationService {
                                 fcmSuccess.incrementAndGet();
                             })
                             .onErrorResume(e -> {
+                                if (e instanceof java.util.concurrent.TimeoutException) {
+                                    log.warn("FCM 타임아웃(스레드 대기 포함) token={}", tokenDoc.getToken());
+                                }
+
                                 log.error("fcm으로 토큰이랑 보낼때 에러", e);
                                 attemptCounter.increment();
                                 failedCounter.increment();
