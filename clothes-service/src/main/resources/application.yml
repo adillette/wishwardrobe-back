@@ -5,20 +5,14 @@ server:
 
 spring:
   datasource:
-    url: jdbc:h2:mem:testdb
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
-
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
-
+    url: jdbc:postgresql://${DB_HOST:localhost}:5432/${DB_NAME:clothes}
+    driver-class-name: org.postgresql.Driver
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
   jpa:
     hibernate:
       ddl-auto: update
-    database-platform: org.hibernate.dialect.H2Dialect
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
 
   cache:
     # // spring.cache 위치가 맞음. 기존엔 file 하위에 있었음
@@ -42,9 +36,8 @@ services:
     # // 환경변수 있으면 사용, 없으면 로컬 기본값
 
 file:
-  upload-dir: /app/uploads
-  uploadDir: /app/uploads
   uploadFiles: /app/uploads
+  imageBaseUrl: ${IMAGE_BASE_URL:http://localhost:8081/api/clothes/images/}
 
 logging:
   level:
