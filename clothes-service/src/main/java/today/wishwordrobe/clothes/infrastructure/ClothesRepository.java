@@ -1,6 +1,7 @@
 package today.wishwordrobe.clothes.infrastructure;
 
 import today.wishwordrobe.clothes.domain.Clothes;
+import today.wishwordrobe.clothes.domain.ClothesImageData;
 import today.wishwordrobe.clothes.domain.ClothesImageUploadInfo;
 import today.wishwordrobe.clothes.domain.ClothesInfo;
 import today.wishwordrobe.clothes.domain.ClothingCategory;
@@ -35,12 +36,11 @@ public interface ClothesRepository extends JpaRepository<Clothes,Long> {
 
 
     @Modifying
-    @Query(value=" INSERT INTO FILE_INFO(NEW_FILE_NAME, FILE_PATH, USER_ID) "+
-    " VALUES(:fileName, :filePath, :userId)",nativeQuery = true)
-
+    @Query(value = "INSERT INTO file_info(new_file_name, file_path, user_id) " +
+            "VALUES(:fileName, :filePath, :userId)", nativeQuery = true)
     void saveFilePath(@Param("fileName") String fileName,
-                      @Param("filePath") String filePath,
-                      @Param("userId") Long userId);
+                    @Param("filePath") String filePath,
+                    @Param("userId") Long userId);
 
     default void saveFilePathes(List<FileInfo> fileInfos, Long userId){
         fileInfos.forEach(fileInfo ->
@@ -49,12 +49,12 @@ public interface ClothesRepository extends JpaRepository<Clothes,Long> {
 
 
     @Modifying
-    @Query(value = "INSERT INTO CLOTHES_IMAGE (CLOTHES_ID,IMAGE_PATH,IMAGE_NAME,SEQ) "+
-    " VALUES (:clothesId, :imagePath, :imageName, :seq)", nativeQuery = true)
-    void saveImage(@Param("clothesId")Long clothesId,
-                   @Param("imagePath") String imagePath,
-                   @Param("imageName")String imageName,
-                   @Param("seq")int seq);
+    @Query(value = "INSERT INTO clothes_image (clothes_id, image_path, image_name, seq) " +
+            "VALUES (:clothesId, :imagePath, :imageName, :seq)", nativeQuery = true)
+    void saveImage(@Param("clothesId") Long clothesId,
+                @Param("imagePath") String imagePath,
+                @Param("imageName") String imageName,
+                @Param("seq") int seq);
 
     default void uploadImages(Long clothesId,List<ClothesImageUploadInfo> imageInfos){
         imageInfos.forEach(info->
@@ -68,39 +68,36 @@ public interface ClothesRepository extends JpaRepository<Clothes,Long> {
     /*
     이미지 있는지 확인
      */
-    @Query(value = "SELECT COUNT(*) FROM CLOTHES_IMAGE WHERE CLOTHES_ID= :clothesId", nativeQuery = true)
+    @Query(value = "SELECT COUNT(*) FROM clothes_image WHERE clothes_id = :clothesId", nativeQuery = true)
     int countImages(@Param("clothesId") Long clothesId);
 
     default boolean isExistImages(Long clothesId){
         return countImages(clothesId)>0;
     };
 
-    //이미지 조회
-    @Query(value = "SELECT IMAGE_NAME,IMAGE_PATH,SEQ FROM CLOTHES_IMAGE"+
-    " WHERE CLOTHES_ID=:clothesId ORDER BY SEQ",nativeQuery = true)
-    List<Object[]> getImageData(@Param("clothesId")Long clothesId);
+   //이미지 조회
+@Query(value = "SELECT image_name AS imageName, image_path AS imagePath, seq AS seq " +
+    "FROM clothes_image WHERE clothes_id = :clothesId ORDER BY seq", nativeQuery = true)
+List<ClothesImageData> getImageData(@Param("clothesId") Long clothesId);
 
 
-    
-    // 이미지 파일 경로들만 조회
-    @Query(value = "SELECT FILE_PATH FROM CLOTHES_IMAGE WHERE CLOTHES_ID = :clothesId", nativeQuery = true)
-    List<String> getImagePaths(@Param("clothesId") long clothesId);
-
-  
+// 이미지 파일 경로들만 조회
+@Query(value = "SELECT image_path FROM clothes_image WHERE clothes_id = :clothesId", nativeQuery = true)
+List<String> getImagePaths(@Param("clothesId") long clothesId);
 
 
     /*
     실제 이미지 삭제
      */
     @Modifying
-    @Query(value = "DELETE FROM CLOTHES_IMAGE WHERE CLOTHES_ID=:clothesId",nativeQuery = true)
+    @Query(value = "DELETE FROM clothes_image WHERE clothes_id = :clothesId", nativeQuery = true)
     void deleteImages(@Param("clothesId") long clothesId);
 
     /*
     디비에 있는 이름 삭제하기
      */
     @Modifying
-    @Query(value = "DELETE FROM FILE_INFO WHERE USER_ID=:userId", nativeQuery = true)
+    @Query(value = "DELETE FROM file_info WHERE user_id = :userId", nativeQuery = true)
     void deleteFilesByUserId(@Param("userId") Long userId);
     
     
