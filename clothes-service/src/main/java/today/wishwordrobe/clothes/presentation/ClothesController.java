@@ -1,24 +1,32 @@
 package today.wishwordrobe.clothes.presentation;
 
 import today.wishwordrobe.clothes.application.ClothesService;
+import today.wishwordrobe.clothes.application.FileService;
 import today.wishwordrobe.clothes.domain.Clothes;
 import today.wishwordrobe.clothes.domain.ClothingCategory;
+import today.wishwordrobe.clothes.domain.FileInfo;
 import today.wishwordrobe.clothes.domain.TempRange;
 
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+
 
 @Slf4j
 @RestController
 @RequestMapping("/clothes")
 public class ClothesController{//아래 setter 바꿔야한다
     private final ClothesService clothesService;
+    private final FileService fileService;
 
-    public ClothesController(ClothesService clothesService) {
+    public ClothesController(ClothesService clothesService, FileService fileService) {
         this.clothesService = clothesService;
+        this.fileService = fileService;
     }
 
   
@@ -64,12 +72,26 @@ public class ClothesController{//아래 setter 바꿔야한다
     /*
     옷장에 save 시킴
      */
-    @PostMapping("/add")
-    public ResponseEntity<Clothes> addClothes(@RequestBody Clothes clothes){
+    @PostMapping(value = "/add" , consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Clothes> addClothes(
+        @RequestParam("userId") Long userId,
+        @RequestParam("name") String name,
+        @RequestParam("category") ClothingCategory category,
+        @RequestParam("tempRange") TempRange tempRange,
+        @RequestParam("image") MultipartFile image) {
         //save 메서드가 자동으로 캐시 무효화 처리해줌
-        Clothes savedClothes = clothesService.save(clothes);
+        Clothes clothes = Clothes.builder()
+                .userId(userId)
+                .name(name)
+                .category(category)
+                .tempRange(tempRange)
+                .build();
 
-        log.info("새옷 추가 및 캐시 무효화 완료: userId={}" ,clothes.getUserId());
+        Clothes savedClothes = clothesService.save(clothes);
+        
+        FileInfo fileInfo = fileService.uploadFile(image, userId);
+        fileService.uploadImage(savedClothes.getClothesId(), fileInfo);
+        log.info("새옷 추가 및 이미지 저장 완료: userId={}, clothesId={}", userId, savedClothes.getClothesId());
         return ResponseEntity.ok(savedClothes);
     }
 
@@ -86,6 +108,17 @@ public class ClothesController{//아래 setter 바꿔야한다
 
         return ResponseEntity.ok(updatedClothes);
     }
+
+
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<Clothes>> getClothesByUserId(@PathVariable("userId") Long userId) {
+        
+        log.info("옷장 전체 조회: userId={}", userId);
+        List<Clothes> clothes = clothesService.getClothesByUserId(userId);
+        return ResponseEntity.ok(clothes);
+    }
+    
+
 
     /*
     해당 id 내용 삭제

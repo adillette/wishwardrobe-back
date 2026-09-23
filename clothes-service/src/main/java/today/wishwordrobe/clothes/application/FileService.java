@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
 import java.io.File;
 import java.io.IOException;
 
-
+@Transactional
 @Service
 @RequiredArgsConstructor
 //@Profile("dev")
@@ -75,7 +75,7 @@ public class FileService {
         ClothesImageUploadInfo imageUploadInfo =
                 FileUtil.toImageUploadInfo(id,fileInfo,1);
         clothesRepository.saveImage(
-                imageUploadInfo.getId(),
+                id,
                 imageUploadInfo.getImagePath(),
                 imageUploadInfo.getImageName(),
                 imageUploadInfo.getSeq()
@@ -83,9 +83,10 @@ public class FileService {
     }
 
     public void uploadImages(Long id, List<FileInfo> fileInfos){
-        List<ClothesImageUploadInfo> imageUploadInfos = fileInfos.stream()
-                .map(info -> FileUtil.toImageUploadInfo(id, info,fileInfos.indexOf(info)+1 ))
-                .collect(Collectors.toList());
+        List<ClothesImageUploadInfo> imageUploadInfos = 
+                fileInfos.stream()
+                        .map(info -> FileUtil.toImageUploadInfo(id, info,fileInfos.indexOf(info)+1 ))
+                        .collect(Collectors.toList());
         clothesRepository.uploadImages(id,imageUploadInfos);
     }
 
