@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UVIndexResponse {
-  private Response response;
+ private Response response;
 
   @Data
   @NoArgsConstructor
@@ -39,18 +39,41 @@ public class UVIndexResponse {
   @NoArgsConstructor
   @AllArgsConstructor
   public static class Items {
-    private List<Item> item;  // 자외선 API는 "item" 이름 사용 (items 아님)
+    private List<Item> item;
   }
 
   @Data
   @NoArgsConstructor
   @AllArgsConstructor
   public static class Item {
-    private String code; // 지역코드
-    private String areaNo; // 지역번호
-    private String date; // 예보날짜
-    private String today; // 오늘 자외선 지수 (0~11+)
-    private String tomorrow; // 내일
-    private String theDayAfterTomorrow; // 모레
+    private String code;     // 지수코드
+    private String areaNo;   // 지점코드
+    private String date;     // 발표시간
+    private String h0;       // 0시간 후(현재) 예측값
+    private String h3;
+    private String h6;
+    private String h9;
+    private String h12;
+    private String h15;
+    private String h18;
+    private String h21;
+    private String h24;      // 24시간 후(내일 같은 시각) 예측값
+    private String h27;
+    private String h30;
+    private String h33;
+    private String h36;
+    private String h39;
+    private String h42;
+    private String h45;
+    private String h48;
+    private String h51;
+    private String h54;
+    private String h57;
+    private String h60;
+    private String h63;
+    private String h66;
+    private String h69;
+    private String h72;
+    private String h75;
   }
 }

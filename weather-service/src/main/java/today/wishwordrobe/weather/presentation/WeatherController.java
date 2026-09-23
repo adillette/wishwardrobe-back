@@ -23,7 +23,7 @@ public class WeatherController {
    //지역명으로 날씨 조회
     @GetMapping
     public Mono<ResponseEntity<WeatherForecastDTO>> getWeatherByLocation(@RequestParam("location") String location){
-        log.info("로케이션 나와랏: {}" + location);
+        // log.info("로케이션 나와랏: {}" + location);
 
         return weatherService.getWeatherForecast(location)
                 .map(ResponseEntity::ok)
@@ -48,23 +48,6 @@ public class WeatherController {
                     return Mono.just(ResponseEntity.badRequest().build());
                 });
     }
-
-    // //날씨 + 미세먼지 + 자외선을 병렬로 조회 (Mono.zip 사용)
-    // @GetMapping("/integrated")
-    // public Mono<ResponseEntity<IntegratedWeatherDto>> getIntegratedWeather(
-    //         @RequestParam("location") String location,
-    //         @RequestParam("station") String station,
-    //         @RequestParam("areaNo") String areaNo) {
-    //     log.info("통합 날씨 정보 병렬 조회 요청: location={}, station={}, areaNo={}", location, station, areaNo);
-
-    //     return weatherService.getIntegratedWeatherParallel(location, station, areaNo)
-    //             .map(ResponseEntity::ok)
-    //             .doOnSuccess(response -> log.info("통합 날씨 정보 병렬 조회 성공: {}", location))
-    //             .onErrorResume(e -> {
-    //                 log.error("통합 날씨 정보 조회 오류: {}", e.getMessage(), e);
-    //                 return Mono.just(ResponseEntity.badRequest().build());
-    //             });
-    // }
 
      //위경도로 통합 날씨 정보 조회 (날씨 + 미세먼지 + 자외선)
   

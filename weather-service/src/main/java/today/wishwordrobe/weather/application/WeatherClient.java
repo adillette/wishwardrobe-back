@@ -1,9 +1,9 @@
 package today.wishwordrobe.weather.application;
 
 import java.net.URI;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -42,12 +42,16 @@ public class WeatherClient {
         String baseDate = baseDateTime.get("baseDate");
         String baseTime = baseDateTime.get("baseTime");
 
-        boolean apiKeyAlreadyEncoded = config.getApiKey() != null && config.getApiKey().contains("%");
+        String rawKey= config.getApiKey();
+        String encodedApiKey = rawKey == null ? null
+                : (rawKey.contains("%") ? rawKey :URLEncoder.encode(rawKey, StandardCharsets.UTF_8));
 
+
+      
         URI uri = UriComponentsBuilder
-                .fromHttpUrl(config.getBaseUrl())
+                .fromUriString(config.getBaseUrl())//fromHttpUrl → fromUriString으로 변경
                 .path(config.getVillageFcstUrl()) // application.yml의 /getVilageFcst 사용
-                .queryParam("serviceKey", config.getApiKey())
+                .queryParam("serviceKey", encodedApiKey)
                 .queryParam("numOfRows", 1000)
                 .queryParam("pageNo", 1)
                 .queryParam("dataType", "JSON")
@@ -55,7 +59,7 @@ public class WeatherClient {
                 .queryParam("base_time", baseTime)
                 .queryParam("nx", location.getGridX())
                 .queryParam("ny", location.getGridY())
-                .build(apiKeyAlreadyEncoded) // 인코딩 키면 true(그대로), 디코딩 키면 false(한 번 인코딩)
+                .build(true) // 인코딩 키면 true(그대로), 디코딩 키면 false(한 번 인코딩)
                 .toUri();
 
         log.info("생성된 api url: {}", uri);
@@ -116,9 +120,9 @@ public class WeatherClient {
     public Mono<AirQualityResponse> getAirQuality(String stationName){
         String apiKey = airKoreaConfig.getApiKey();
         String encodedApiKey = apiKey == null ? null
-                : (apiKey.contains("%") ? apiKey : UriUtils.encodeQueryParam(apiKey, StandardCharsets.UTF_8));
+                : (apiKey.contains("%") ? apiKey : URLEncoder.encode(apiKey, StandardCharsets.UTF_8));
         String encodedStationName = stationName == null ? null
-                : UriUtils.encodeQueryParam(stationName, StandardCharsets.UTF_8);
+                : URLEncoder.encode(stationName, StandardCharsets.UTF_8);
 
         URI uri = UriComponentsBuilder
         .fromUriString(airKoreaConfig.getBaseUrl() + airKoreaConfig.getAirQualityUrl())
@@ -175,10 +179,16 @@ public class WeatherClient {
 
     //자외선 지수
     public Mono<UVIndexResponse> getUVIndex(String areaNo){
-        String today = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String today = LocalDateTime.now().format(DateTimeFormatter
+            .ofPattern("yyyyMMddHH"));
+
+        String rawKey= config.getApiKey();
+        String encodedApiKey= rawKey == null ? null
+                : (rawKey.contains("%") ? rawKey :URLEncoder.encode(rawKey, StandardCharsets.UTF_8));
+        
         URI uri = UriComponentsBuilder
-        .fromUriString("http://apis.data.go.kr/1360000/LivingWthrIdxServiceV4/getUVIdxV4")
-        .queryParam("serviceKey", config.getApiKey())
+        .fromUriString("http://apis.data.go.kr/1360000/LivingWthrIdxServiceV5/getUVIdxV5")
+        .queryParam("serviceKey", encodedApiKey)
         .queryParam("areaNo",areaNo)
         .queryParam("time", today)
         .queryParam("dataType", "JSON")

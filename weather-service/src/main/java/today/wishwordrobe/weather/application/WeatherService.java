@@ -7,7 +7,7 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 
-import org.springframework.cache.annotation.Cacheable;
+// import org.springframework.cache.annotation.Cacheable;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -231,67 +231,10 @@ public class WeatherService {
 
     }
 
-    // 날씨 + 미세먼지 + 자외선 정보를 병렬로 조회 (Mono.zip 사용)
-    public Mono<IntegratedWeatherDto> getIntegratedWeatherParallel(String location, String stationName, String areaNo) {
-        log.info("통합 날씨 정보 병렬 조회 시작: location={}, station={}, area={}", location, stationName, areaNo);
-        long startTime = System.currentTimeMillis();
-
-        // 1. 지역 좌표 찾기
-        Geographic geoLocation = findGeographicByLocationName(location);
-        if (geoLocation == null) {
-            log.error("지역명을 찾을 수 없습니다: {}", location);
-            return Mono.error(new RuntimeException("지역을 찾을 수 없습니다: " + location));
-        }
-
-        // 2. 3개 API를 병렬로 호출 (Mono.zip) - Optional로 감싸서 실패해도 항상 값을 emit
-        return Mono.zip(
-                // 날씨 API - Optional로 감싸서 실패 시 Optional.empty() 반환
-                weatherClient.getVillageForecast(geoLocation)
-                        .map(response -> Optional.of(convertToWeatherForecastDTO(response, geoLocation)))
-                        .doOnError(e -> log.error("날씨 API 호출 실패: {}", e))
-                        .onErrorReturn(Optional.empty()),
-
-                // 미세먼지 API - Optional로 감싸서 실패 시 Optional.empty() 반환
-                weatherClient.getAirQuality(stationName)
-                        .map(dto -> Optional.ofNullable(convertToAirQualityDto(dto)))
-                        .doOnError(e -> {
-                            if (e instanceof WebClientResponseException) {
-                                WebClientResponseException ex = (WebClientResponseException) e;
-                                log.error("미세먼지 API 호출 실패: Status={}, Body={}",
-                                        ex.getStatusCode(),
-                                        ex.getResponseBodyAsString()); // 이게 핵심
-                            } else {
-                                log.error("미세먼지 API 호출 실패: {}", e.getMessage());
-                            }
-                        })
-                        .onErrorReturn(Optional.empty()),
-
-                // 자외선 API - Optional로 감싸서 실패 시 Optional.empty() 반환
-                weatherClient.getUVIndex(areaNo)
-                        .map(dto -> Optional.ofNullable(convertToUVIndexDto(dto)))
-                        .doOnError(e -> log.error("자외선 API 호출 실패: {}", e.getMessage()))
-                        .onErrorReturn(Optional.empty()))
-                .map(tuple -> IntegratedWeatherDto.builder()
-                        .weather(tuple.getT1().orElse(null)) // 날씨 (실패 시 null)
-                        .airQuality(tuple.getT2().orElse(null)) // 미세먼지 (실패 시 null)
-                        .uvIndex(tuple.getT3().orElse(null)) // 자외선 (실패 시 null)
-                        .location(location)
-                        .timestamp(java.time.LocalDateTime.now().toString())
-                        .build())
-                .doOnSuccess(dto -> {
-                    long totalTime = System.currentTimeMillis() - startTime;
-                    log.info("통합 날씨 정보 병렬 조회 완료: {} (총 {}ms)", location, totalTime);
-
-                    if (dto.getWeather() != null) {
-                        saveWeatherForecastToMongoDB(convertToWeatherTotal(dto, geoLocation));
-                    }
-                })
-                .doOnError(error -> log.error("통합 날씨 정보 병렬 조회 실패: {}", location, error));
-    }
 
     //위경도 기반 통합 날씨 lat, lon
-    @Cacheable( cacheNames = "integratedWeatherCache",
-     key = "#longitude + '_' + #latitude")
+    // @Cacheable( cacheNames = "integratedWeatherCache",
+    //  key = "#longitude + '_' + #latitude")
     public Mono<IntegratedWeatherDto> getIntegratedWeatherByCoordinates(double latitude,double longitude) {
         log.info("위경도 기반 통합 날씨 정보 조회 시작: lat={}, lon={}", latitude, longitude);
         long startTime = System.currentTimeMillis();
@@ -340,7 +283,13 @@ public class WeatherService {
                 // 자외선 API - Optional로 감싸서 실패 시 Optional.empty() 반환
                 weatherClient.getUVIndex(locationInfo.areaNo())
                         .map(dto -> Optional.ofNullable(convertToUVIndexDto(dto)))
-                        .doOnError(e -> log.error("자외선 API 호출 실패: {}", e))
+                        .doOnError(e->{
+                            if(e instanceof WebClientResponseException ex){
+                                log.error("자외선 API 호출 실패: Status={}, Body={}", ex.getStatusCode(),ex.getResponseBodyAsString());
+                            } else {
+                                log.error("자외선 API 호출 실패: {}", e.getMessage(), e);
+                            }
+                        })
                         .onErrorReturn(Optional.empty()))
                 .map(tuple -> IntegratedWeatherDto.builder()
                         .weather(tuple.getT1().orElse(null)) // 날씨 (실패 시 null)
@@ -390,28 +339,28 @@ public class WeatherService {
      * UVIndexResponse → UVIndexDto 변환
      */
     private UVIndexDto convertToUVIndexDto(UVIndexResponse response) {
-        if (response == null || response.getResponse() == null ||
-                response.getResponse().getBody() == null ||
-                response.getResponse().getBody().getItems() == null ||
-                response.getResponse().getBody().getItems().getItem() == null ||
-                response.getResponse().getBody().getItems().getItem().isEmpty()) {
-            return null;
-        }
+         if (response == null || response.getResponse() == null ||
+            response.getResponse().getBody() == null ||
+            response.getResponse().getBody().getItems() == null ||
+            response.getResponse().getBody().getItems().getItem() == null ||
+            response.getResponse().getBody().getItems().getItem().isEmpty()) {
+        return null;
+    }
 
-        UVIndexResponse.Item item = response.getResponse().getBody().getItems().getItem().get(0);
+    UVIndexResponse.Item item = response.getResponse().getBody().getItems().getItem().get(0);
 
-        int todayIndex = parseIntOrZero(item.getToday());
-        int tomorrowIndex = parseIntOrZero(item.getTomorrow());
+    int todayIndex = parseIntOrZero(item.getH0());
+    int tomorrowIndex = parseIntOrZero(item.getH24());
 
-        return UVIndexDto.builder()
-                .areaNo(item.getAreaNo())
-                .date(item.getDate())
-                .todayIndex(todayIndex)
-                .tomorrowIndex(tomorrowIndex)
-                .todayLevel(getUVLevel(todayIndex))
-                .tomorrowLevel(getUVLevel(tomorrowIndex))
-                .recommendation(getUVRecommendation(todayIndex))
-                .build();
+    return UVIndexDto.builder()
+            .areaNo(item.getAreaNo())
+            .date(item.getDate())
+            .todayIndex(todayIndex)
+            .tomorrowIndex(tomorrowIndex)
+            .todayLevel(getUVLevel(todayIndex))
+            .tomorrowLevel(getUVLevel(tomorrowIndex))
+            .recommendation(getUVRecommendation(todayIndex))
+            .build();
     }
 
     private int parseIntOrZero(String value) {
