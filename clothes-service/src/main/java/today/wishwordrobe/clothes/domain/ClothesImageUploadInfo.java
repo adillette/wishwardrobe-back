@@ -8,6 +8,7 @@ import lombok.Getter;
 @Builder
 @AllArgsConstructor
 public class ClothesImageUploadInfo {
+    //DB의 옷 이미지 테이블에 저장하기 위한 정보
     private  Long id;  // clothesId를 의미 (이름 잘못 지음)
     private  Long clothesId;
 

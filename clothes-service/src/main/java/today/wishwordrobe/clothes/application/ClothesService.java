@@ -1,9 +1,11 @@
 package today.wishwordrobe.clothes.application;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -12,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import today.wishwordrobe.clothes.domain.Clothes;
+import today.wishwordrobe.clothes.domain.ClothesImageData;
 import today.wishwordrobe.clothes.domain.ClothingCategory;
 import today.wishwordrobe.clothes.domain.TempRange;
 import today.wishwordrobe.clothes.infrastructure.ClothesRepository;
@@ -27,6 +30,7 @@ public class ClothesService {
     private final ClothesRepository clothesRepository;
     private final WeatherServiceClient weatherServiceClient;
     
+    @Value ("${file.imageBaseUrl}")
     public String IMAGE_BASE_URL;
     // 위경도에 맞는추천
     public List<Clothes> getClothesRecommendationByCoordinates(
@@ -69,14 +73,14 @@ public class ClothesService {
     }
 
     private Clothes fillImageUrl(Clothes clothes){
-        List<Object[]> rawImages=clothesRepository.getImageData(clothes.getClothesId());
+        List<ClothesImageData> rawImages=clothesRepository.getImageData(clothes.getClothesId());
         if(!rawImages.isEmpty()){
-            Object[] firstImage=rawImages.get(0);
-            String imagePath= (String)firstImage[1];
-            String imageName=(String) firstImage[2];
-
-            String imageUrl=(imagePath!=null && !imageName.isEmpty()) ? imagePath : IMAGE_BASE_URL + imageName;
-            clothes.setImageUrl(imageUrl);
+            
+            ClothesImageData first = rawImages.get(0);
+            String imageName=first.getImageName();
+          //  String imagePath=first.getImagePath();
+            
+            clothes.setImageUrl(IMAGE_BASE_URL +clothes.getUserId()+ "/" + imageName);
 
         }else{
             clothes.setImageUrl(IMAGE_BASE_URL + "default-clothes.png");
@@ -86,7 +90,12 @@ public class ClothesService {
 
     // 특정 userId의 옷 전체 조회 (옷장 목록용)
     public List<Clothes> getClothesByUserId(Long userId) {
-        return clothesRepository.findByUserId(userId);
+        List<Clothes> clothesList = clothesRepository.findByUserId(userId);
+        List<Clothes> result = new ArrayList<>();
+        for(Clothes clothes : clothesList){
+            result.add(fillImageUrl(clothes));
+        }
+        return result;
     }
 
     @Cacheable(value = "clothesCache", key = "#userId+':'+ #tempRange.name() + ':' + (#category != null ? #category.name() : 'ALL')", condition = "#userId != null")
