@@ -26,7 +26,7 @@ public class Clothes {
     }
 
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long clothesId;
 
     @Column(name="user_id")
@@ -41,6 +41,7 @@ public class Clothes {
     @Column(name="temp_range")
     private TempRange tempRange;
 
+    @Column(columnDefinition = "TEXT")
     private String imageUrl;
 
     private LocalDateTime createdAt;
