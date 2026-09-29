@@ -5,6 +5,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
@@ -13,7 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriComponentsBuilder;
-import org.springframework.web.util.UriUtils;
+
 
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
@@ -28,12 +29,13 @@ import today.wishwordrobe.weather.dto.VillageForecastResponse;
 @Slf4j
 @Component
 public class WeatherClient {
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
     @Autowired
-    private  WebClient webClient;
+    private  WebClient webClient;//날씨api랑 연결하기 위해 사용함
     @Autowired
-    private  WeatherConfig config;
+    private  WeatherConfig config;//날씨랑 연결하기 위한 환경 설정
     @Autowired
-    private  AirKoreaConfig airKoreaConfig;
+    private  AirKoreaConfig airKoreaConfig; // 미세먼지 농도 api 연결하기 위한 환경 설정
   
 
    //격자 좌표 조회
@@ -62,7 +64,7 @@ public class WeatherClient {
                 .build(true) // 인코딩 키면 true(그대로), 디코딩 키면 false(한 번 인코딩)
                 .toUri();
 
-        log.info("생성된 api url: {}", uri);
+       log.info("생성된 api url: {}", maskKey(uri));
 
         return webClient
                 .get()
@@ -86,7 +88,7 @@ public class WeatherClient {
     }
 
     private Map<String, String> calculateBaseTime() {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(KST);
         DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyyMMdd");
 
         int[] baseTimes = { 2, 5, 8, 11, 14, 17, 20, 23 };
@@ -135,7 +137,7 @@ public class WeatherClient {
         .queryParam("numOfRows", 1)
         .build(true).toUri();
 
-        log.info("생성된 미세먼지 api url: {}", uri);
+        log.info("생성된 미세먼지 api url: {}", maskKey(uri));
 
         return webClient.get().uri(uri).retrieve()
         .bodyToMono(AirQualityResponse.class)
@@ -179,7 +181,7 @@ public class WeatherClient {
 
     //자외선 지수
     public Mono<UVIndexResponse> getUVIndex(String areaNo){
-        String today = LocalDateTime.now().format(DateTimeFormatter
+        String today = LocalDateTime.now(KST).format(DateTimeFormatter
             .ofPattern("yyyyMMddHH"));
 
         String rawKey= config.getApiKey();
@@ -210,5 +212,9 @@ public class WeatherClient {
             )
         );
     }
+
+    private String maskKey(URI uri) {
+    return uri.toString().replaceAll("serviceKey=[^&]*", "serviceKey=****");
+}
 
 }
