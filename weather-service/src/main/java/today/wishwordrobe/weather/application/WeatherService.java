@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 
@@ -48,7 +49,7 @@ public class WeatherService {
     private final LocationMapper locationMapper;
     private final WeatherRepository weatherRepository;
 
-    
+
     private static final String LOCATION_JSON_PATH = "static/location_data.json";
 
   //    지역명으로 날씨 정보 조회
@@ -68,7 +69,8 @@ public class WeatherService {
                 .map(response -> convertToWeatherForecastDTO(response, geoLocation))
                 .doOnSuccess(dto -> log.info("날씨 정보 조회 성공: {}", location))
                 .doOnError(e -> log.error("날씨 정보 조회 실패: {}", e.getMessage()));
-    }
+    
+            }
 
    //위경도로 날씨 정보 조회 lat, lon 순서
     public Mono<WeatherForecastDTO> getWeatherByCoordinates(double latitude, double longitude) {
@@ -154,9 +156,11 @@ public class WeatherService {
             // 날씨 카테고리 나눠야 나중에 temprange로 나눌수 있음
             switch (category) {
                 case "TMX":
+                    if ("1500".equals(item.getFcstTime()))
                     builder.maxTemperature(Double.parseDouble(value));
                     break;
                 case "TMN": // 최저 기온
+                    if ("0600".equals(item.getFcstTime()))
                     builder.minTemperature(Double.parseDouble(value));
                     break;
                 case "REH": // 습도

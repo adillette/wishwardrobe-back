@@ -19,7 +19,7 @@ spring:
             - Path=/api/weather/**
           filters:
           - StripPrefix=1
-
+          - PrefixPath=/api/v1
         - id: notification-service
           uri: http://notification-service:8083
           predicates:
