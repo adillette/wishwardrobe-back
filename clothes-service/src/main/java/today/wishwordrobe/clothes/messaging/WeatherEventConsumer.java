@@ -1,9 +1,8 @@
 package today.wishwordrobe.clothes.messaging;
 
-import java.util.Comparator;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
@@ -11,11 +10,17 @@ import org.springframework.stereotype.Component;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import today.wishwordrobe.clothes.application.ClothesService;
-import today.wishwordrobe.clothes.domain.Clothes;
-import today.wishwordrobe.clothes.domain.ClothesInfo;
-import today.wishwordrobe.clothes.domain.TempRange;
+import today.wishwordrobe.clothes.domain.ClothesResponse;
 import today.wishwordrobe.clothes.messaging.dto.ClothesMatchedEvent;
 import today.wishwordrobe.clothes.messaging.dto.WeatherEvent;
+
+/*
+spring AMQP
+
+
+
+*/
+
 
 @Slf4j
 @Component
@@ -31,18 +36,18 @@ public class WeatherEventConsumer {
     log.info("WeatherEvent 수신. userId={}, maxTemp={}, minTemp={}",
                 event.getUserId(), event.getMaxTemperature(), event.getMinTemperature());
 
-   Long userId = event.getUserId();
-   //평균 기온 계산후 TempRange 변환
-   int avgTemp= calAvgTemp(event);
+    //기온 정보가 없으면 발행하지 않고 종료
+    //예외 던지면 Spring AMQP 기본 설정상 메시지가 큐로 재적재되어 무한 재시도하게됨
+    List<ClothesResponse> recommended = clothesService.recommendByTemperatures(event.getUserId(),
+     event.getMaxTemperature(), 
+     event.getMinTemperature(), 
+     null);
+    List<ClothesItemDto> recommendedClothes = new ArrayList<>();
+    for(ClothesResponse r : recommended){
+      recommendedClothes.add(toDto(r));
+    }
 
-    TempRange tempRange = TempRange.fromTemperature(avgTemp);
-    List<Clothes> candidates = clothesService.getClothesWithCache(userId, tempRange, null);
-    List<ClothesItemDto> recommendedClothes   =candidates.stream()
-                                            .sorted(Comparator.comparing(Clothes::getCreatedAt))
-                                            .limit(5)
-                                            .map(this::toDto)
-                                            .collect(Collectors.toList());
-    
+   
     ClothesMatchedEvent matchedEvent= new ClothesMatchedEvent(
       UUID.randomUUID().toString(),
       event.getUserId(),
@@ -58,26 +63,23 @@ public class WeatherEventConsumer {
 
   }
 
-   private ClothesItemDto toDto(Clothes clothes){
-      return new ClothesItemDto(
-        clothes.getClothesId(),
-        clothes.getName(),
-        clothes.getCategory().name(),
-        clothes.getImageUrl()
+   private ClothesItemDto toDto(ClothesResponse r){
+    String imageUrl = r.getImageUrl();
+     if (imageUrl != null && imageUrl.startsWith("data:")) {
+      imageUrl = null;
+    }
+    
+    
+    return new ClothesItemDto(
+        r.getClothesId(),
+        r.getName(),
+        r.getCategory().name(),
+        r.getImageUrl()
       );
     }
 
 
 
-  public int calAvgTemp(WeatherEvent event){
-    if(event.getMaxTemperature()!=null && event.getMinTemperature()!=null){
-      return (int) Math.round((event.getMaxTemperature()+event.getMinTemperature())/2.0);
-    }else if(event.getMaxTemperature()!=null){
-        return event.getMaxTemperature().intValue();
-        } else if (event.getMinTemperature() != null) {
-            return event.getMinTemperature().intValue();
-        }
-        return 20; // // 기본값: fallback과 동일하게 20도
-  }
+ 
 
 }
