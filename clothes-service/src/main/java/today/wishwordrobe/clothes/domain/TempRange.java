@@ -14,8 +14,8 @@ public enum TempRange {
     VERY_HOT(23, 27),       // 매우 더운 날씨
     EXTREME_HOT(28, 50);    // 극심하게 더운 날씨
 
-    private  int minTemp;
-    private  int maxTemp;
+    private final int minTemp;
+    private final int maxTemp;
 
     TempRange(int minTemp, int maxTemp) {
         this.minTemp = minTemp;
