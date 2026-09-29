@@ -12,6 +12,8 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+
+import java.util.Collection;
 import java.util.List;
 
 
@@ -26,7 +28,7 @@ public interface ClothesRepository extends JpaRepository<Clothes,Long> {
     List<Clothes> findByUserIdAndCategory(Long userId, ClothingCategory category);
     List<Clothes> findByUserIdAndTempRangeAndCategory(Long userId, TempRange tempRange, ClothingCategory category);
     List<Clothes> findByUserIdAndTempRange(Long userId, TempRange tempRange);
-
+    List<Clothes> findByUserIdAndTempRangeIn(Long userId, Collection<TempRange> tempRanges);
     @Query("SELECT new today.wishwordrobe.clothes.domain.ClothesInfo(" +
        "c.clothesId, c.name, c.category, c.imageUrl) " +
        "FROM Clothes c WHERE c.clothesId = :clothesId")
