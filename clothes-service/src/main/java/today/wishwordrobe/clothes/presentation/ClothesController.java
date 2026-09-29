@@ -3,6 +3,7 @@ package today.wishwordrobe.clothes.presentation;
 import today.wishwordrobe.clothes.application.ClothesService;
 import today.wishwordrobe.clothes.application.FileService;
 import today.wishwordrobe.clothes.domain.Clothes;
+import today.wishwordrobe.clothes.domain.ClothesResponse;
 import today.wishwordrobe.clothes.domain.ClothingCategory;
 import today.wishwordrobe.clothes.domain.FileInfo;
 import today.wishwordrobe.clothes.domain.TempRange;
@@ -36,16 +37,16 @@ public class ClothesController{//아래 setter 바꿔야한다
      */
 
     @GetMapping("/recommendations/coordinates")
-    public ResponseEntity<List<Clothes>> getRecommendedClothesByCoordinates(
+    public ResponseEntity<List<ClothesResponse>> getRecommendedClothesByCoordinates(
             @RequestParam("userId") Long userId,
             @RequestParam("lat") double lat,
             @RequestParam("lon") double lon,
             @RequestParam(value = "category", required = false) ClothingCategory category  ){
-        
-        log.info("옷 추천 요청 (위경도): userId={}, lat={}, lon={}, category={}", 
+
+        log.info("옷 추천 요청 (위경도): userId={}, lat={}, lon={}, category={}",
                  userId, lat, lon, category);
 
-        List<Clothes> clothes = clothesService.getClothesRecommendationByCoordinates(
+        List<ClothesResponse> clothes = clothesService.getClothesRecommendationByCoordinates(
                 userId, lat, lon, category);
 
         log.info("추천된 옷 개수: {}", clothes.size());
@@ -58,14 +59,14 @@ public class ClothesController{//아래 setter 바꿔야한다
      직접 온도를 받아서 옷 추천 - 하위 호환성 유지
      */
     @GetMapping("/recommendations/by-temperature")
-    public ResponseEntity<List<Clothes>> getRecommendedClothesByTemperature(
+    public ResponseEntity<List<ClothesResponse>> getRecommendedClothesByTemperature(
             @RequestParam("userId") Long userId,
             @RequestParam("temperature") int temperature,
             @RequestParam(value = "category", required = false) ClothingCategory category  ){
         log.info("옷 추천 요청(온도 직접 입력): userId={}, temp={}, category={}", userId, temperature, category);
 
-        TempRange tempRange = TempRange.fromTemperature(temperature);
-        List<Clothes> clothes = clothesService.getClothesWithCache(userId, tempRange, category);
+        List<ClothesResponse> clothes = clothesService.getClothesRecommendationByTemperature(
+                userId, temperature, category);
 
         return ResponseEntity.ok(clothes);
     }
@@ -111,10 +112,10 @@ public class ClothesController{//아래 setter 바꿔야한다
 
 
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<Clothes>> getClothesByUserId(@PathVariable("userId") Long userId) {
-        
+    public ResponseEntity<List<ClothesResponse>> getClothesByUserId(@PathVariable("userId") Long userId) {
+
         log.info("옷장 전체 조회: userId={}", userId);
-        List<Clothes> clothes = clothesService.getClothesByUserId(userId);
+        List<ClothesResponse> clothes = clothesService.getClothesByUserId(userId);
         return ResponseEntity.ok(clothes);
     }
     
