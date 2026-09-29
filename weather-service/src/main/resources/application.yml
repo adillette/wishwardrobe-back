@@ -63,4 +63,4 @@ logging:
   level:
     today.wishwordrobe: DEBUG
     org.springframework.data.mongodb: DEBUG
-    org.springframework.web.reactive: DEBUG
+    org.springframework.web.reactive: INFO
