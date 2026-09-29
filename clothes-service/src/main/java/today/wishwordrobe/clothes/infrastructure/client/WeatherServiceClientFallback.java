@@ -4,6 +4,7 @@ import org.springframework.stereotype.Component;
 
 import lombok.extern.slf4j.Slf4j;
 import today.wishwordrobe.clothes.infrastructure.dto.WeatherForecastDTO;
+import today.wishwordrobe.configuration.WeatherUnavailableException;
 
 //Weather Service 호출 실패 시 대체 로직 (Circuit Breaker)
 
@@ -14,24 +15,14 @@ public class WeatherServiceClientFallback implements WeatherServiceClient {
     @Override
     public WeatherForecastDTO  getWeatherByCoordinates(double lat,double lon){
         log.warn("Weather Service 호출 실패 (좌표). Fallback 실행: lat={}, lon={}", lat, lon);
-        return WeatherForecastDTO.builder()
-                .maxTemperature(20.0)
-                .minTemperature(10.0)
-                .skyCondition("정보 없음")
-                .precipitationType("없음")
-                .build();
+       throw new WeatherUnavailableException("날씨 서비스를 일시적으로 사용할 수 없습니다");   // 가짜 20/10 대신 실패를 그대로 전달
     }
 
 
     @Override
     public WeatherForecastDTO  getWeatherByLocation(String location) {
        log.warn("Weather Service 호출 실패 (지역명). Fallback 실행: location={}", location);
-      return WeatherForecastDTO.builder()
-                .maxTemperature(20.0)
-                .minTemperature(10.0)
-                .skyCondition("정보 없음")
-                .precipitationType("없음")
-                .build();
+     throw new WeatherUnavailableException("날씨 서비스를 일시적으로 사용할 수 없습니다"); 
     }
     
 }
