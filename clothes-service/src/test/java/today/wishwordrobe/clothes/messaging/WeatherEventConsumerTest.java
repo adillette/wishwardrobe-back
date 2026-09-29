@@ -1,11 +1,14 @@
 package today.wishwordrobe.clothes.messaging;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -15,15 +18,14 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import today.wishwordrobe.clothes.application.ClothesService;
-import today.wishwordrobe.clothes.domain.Clothes;
+import today.wishwordrobe.clothes.domain.ClothesResponse;
 import today.wishwordrobe.clothes.domain.ClothingCategory;
-import today.wishwordrobe.clothes.domain.TempRange;
 import today.wishwordrobe.clothes.messaging.dto.ClothesMatchedEvent;
 import today.wishwordrobe.clothes.messaging.dto.WeatherEvent;
 
 @ExtendWith(MockitoExtension.class)
 public class WeatherEventConsumerTest {
- @Mock
+    @Mock
     private ClothesService clothesService;
 
     @Mock
@@ -32,28 +34,21 @@ public class WeatherEventConsumerTest {
     @InjectMocks
     private WeatherEventConsumer weatherEventConsumer;
 
-     @Test
+    @Test
     void 정상_이벤트_수신시_추천결과_발행() {
         // given
         WeatherEvent event = new WeatherEvent();
         event.setUserId(1L);
         event.setMaxTemperature(25.0);
-        event.setMinTemperature(15.0);  // // avgTemp = 20 → TempRange.MILD 또는 해당 범위
+        event.setMinTemperature(15.0);
         event.setSkyCondition("맑음");
         event.setFcmToken("test-fcm-token");
 
-        Clothes clothes = new Clothes();
-        clothes.setClothesId(1L);
-        clothes.setName("흰 티셔츠");
-        clothes.setCategory(ClothingCategory.TOP);
-        clothes.setImageUrl("http://test.com/image.png");
-        clothes.setCreatedAt(LocalDateTime.now());
+        ClothesResponse response = new ClothesResponse(
+                1L, "흰 티셔츠", ClothingCategory.TOP, "http://test.com/image.png");
 
-        // // avgTemp=20이면 TempRange.fromTemperature(20) 결과값으로 맞춰야 함
-        TempRange expectedRange = TempRange.fromTemperature(20);
-
-        when(clothesService.getClothesWithCache(1L, expectedRange, null))
-                .thenReturn(List.of(clothes));
+        when(clothesService.recommendByTemperatures(1L, 25.0, 15.0, null))
+                .thenReturn(List.of(response));
 
         // when
         weatherEventConsumer.handleWeatherEvent(event);
@@ -64,16 +59,15 @@ public class WeatherEventConsumerTest {
     }
 
     @Test
-    void 최고기온만_있을때_fallback_처리() {
+    void 최고기온만_있을때_최저기온_null로_전달() {
         // given
         WeatherEvent event = new WeatherEvent();
         event.setUserId(1L);
         event.setMaxTemperature(25.0);
-        event.setMinTemperature(null);  // // null 케이스
+        event.setMinTemperature(null);
         event.setFcmToken("test-fcm-token");
 
-        TempRange expectedRange = TempRange.fromTemperature(25);
-        when(clothesService.getClothesWithCache(1L, expectedRange, null))
+        when(clothesService.recommendByTemperatures(eq(1L), eq(25.0), isNull(), isNull()))
                 .thenReturn(List.of());
 
         // when
@@ -85,7 +79,7 @@ public class WeatherEventConsumerTest {
     }
 
     @Test
-    void 기온_둘다_null이면_기본값20으로_처리() {
+    void 기온_둘다_null이면_예외발생하고_발행되지않음() {
         // given
         WeatherEvent event = new WeatherEvent();
         event.setUserId(1L);
@@ -93,15 +87,13 @@ public class WeatherEventConsumerTest {
         event.setMinTemperature(null);
         event.setFcmToken("test-fcm-token");
 
-        TempRange expectedRange = TempRange.fromTemperature(20);  // // fallback 20도
-        when(clothesService.getClothesWithCache(1L, expectedRange, null))
-                .thenReturn(List.of());
+        when(clothesService.recommendByTemperatures(eq(1L), isNull(), isNull(), isNull()))
+                .thenThrow(new IllegalStateException("Temperature data is missing"));
 
-        // when
-        weatherEventConsumer.handleWeatherEvent(event);
+        // when & then
+        assertThrows(IllegalStateException.class,
+                () -> weatherEventConsumer.handleWeatherEvent(event));
 
-        // then
-        verify(clothesMatchedEventPublisher, times(1))
-                .publish(any(ClothesMatchedEvent.class));
+        verify(clothesMatchedEventPublisher, never()).publish(any(ClothesMatchedEvent.class));
     }
 }
