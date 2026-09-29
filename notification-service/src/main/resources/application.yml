@@ -41,11 +41,11 @@ webpush:
 
 # clothes Service 연동 추가
 clothes-service:
-  base-url: http://localhost:8081/api/clothes
+  base-url: ${CLOTHES_SERVICE_URL:http://localhost:8081/api/clothes}
 
 # Weather Service 연동 (추가)
 weather-service:
-  base-url: http://localhost:8082/api/v1
+  base-url:  ${WEATHER_SERVICE_URL:http://localhost:8082/api/v1}
 
 
 # Logging
@@ -53,7 +53,7 @@ logging:
   level:
     today.wishwordrobe: DEBUG
     com.google.firebase: DEBUG
-    org.springframework.web.reactive: DEBUG
+    org.springframework.web.reactive: INFO
 
 management:
   endpoints:
