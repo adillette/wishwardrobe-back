@@ -1,7 +1,9 @@
 package today.wishwordrobe.clothes.infrastructure.dto;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 
@@ -14,6 +16,8 @@ import java.time.LocalTime;
 @Getter
 @Setter
 @ToString
+@NoArgsConstructor      // 추가: Jackson이 객체를 만들 때 필요
+@AllArgsConstructor     // 추가: @Builder가 쓰는 생성자. 이게 없으면 컴파일 에러
 public class WeatherForecastDTO {
     private Long id;
 
