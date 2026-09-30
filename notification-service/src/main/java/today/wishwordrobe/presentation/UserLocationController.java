@@ -18,7 +18,7 @@ import today.wishwordrobe.infrastructure.UserLocationDocument;
 import today.wishwordrobe.presentation.dto.UserLocationRequest;
 import today.wishwordrobe.presentation.dto.UserLocationResponse;
 @RestController
-@RequestMapping("/api/locations")
+@RequestMapping("/user-location")
 @RequiredArgsConstructor
 public class UserLocationController {
 
@@ -27,7 +27,7 @@ public class UserLocationController {
 
 
   //프론트가 위치 변경했을때 호출
-    @PutMapping("/locations")
+    @PutMapping("/updatelocations")
     public Mono<ResponseEntity<UserLocationResponse>> updateLocation(@RequestBody UserLocationRequest request) {
        return userLocationService.updateLocation(request)
                    .map(ResponseEntity::ok);
