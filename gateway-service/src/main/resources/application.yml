@@ -23,4 +23,4 @@ spring:
         - id: notification-service
           uri: http://notification-service:8083
           predicates:
-            - Path=/api/notification/**
+            - Path=/api/notification/**, /api/user-location/**
