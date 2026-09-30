@@ -25,7 +25,7 @@ public class UserLocationService {
     }
 
     public Mono<UserLocationResponse> updateLocation(UserLocationRequest request){
-      return userLocationRepository.findById(String.valueOf(request.getUserId()))
+      return userLocationRepository.findByUserId(request.getUserId())
               .flatMap(existing->{
                 existing.setLat(request.getLat());
                 existing.setLon(request.getLon());
@@ -47,7 +47,7 @@ public class UserLocationService {
     }
 
     public Mono<UserLocationResponse> getLocationByUserId(long userId){
-      return userLocationRepository.findById(String.valueOf(userId))
+      return userLocationRepository.findByUserId(userId)
               .map(this::toResponse);
     }
 
