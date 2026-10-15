@@ -3,9 +3,12 @@ package today.wishwordrobe.weather.application;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 // import org.springframework.cache.annotation.Cacheable;
@@ -24,6 +27,7 @@ import today.wishwordrobe.weather.domain.Geographic;
 import today.wishwordrobe.weather.domain.WeatherTotal;
 import today.wishwordrobe.weather.dto.AirQualityDto;
 import today.wishwordrobe.weather.dto.AirQualityResponse;
+import today.wishwordrobe.weather.dto.DailyForecastDTO;
 import today.wishwordrobe.weather.dto.IntegratedWeatherDto;
 import today.wishwordrobe.weather.dto.UVIndexDto;
 import today.wishwordrobe.weather.dto.UVIndexResponse;
@@ -48,7 +52,7 @@ public class WeatherService {
     private final WebClient uvClient;
     private final LocationMapper locationMapper;
     private final WeatherRepository weatherRepository;
-
+    private static final DateTimeFormatter D = DateTimeFormatter.ofPattern("yyyyMMdd");
 
     private static final String LOCATION_JSON_PATH = "static/location_data.json";
 
@@ -132,10 +136,11 @@ public class WeatherService {
     }
 
     private WeatherForecastDTO convertToWeatherForecastDTO(VillageForecastResponse response, Geographic location) {
-
+        
         // 응답에서 필요한 정보를 추출
         VillageForecastResponse.Items items = response.getResponse().getBody().getItems();
-
+        String today = LocalDateTime.now(ZoneId.of("Asia/Seoul")).format(D);
+        
         // DTO 객체 생성해야지 맘대로 정보 가져다쓰기 쉬움
         WeatherForecastDTOBuilder builder  = WeatherForecastDTO.builder()
                 .region(location.getCountry())
@@ -148,19 +153,26 @@ public class WeatherService {
 
         // 한번만 설정하기 만들기 위해서
         boolean dateTimeSet = false;
+
+        List<VillageForecastResponse.Item> todayItems = items.getItem().stream()
+            .filter(i -> today.equals(i.getFcstDate()))
+            .toList();
+
         // API 응답이 여러 아이템을 포함하고 있는 상태 (짬뽕이다)
-        for (VillageForecastResponse.Item item : items.getItem()) {
+
+
+        for (VillageForecastResponse.Item item : todayItems) {
             String category = item.getCategory();
             String value = item.getFcstValue();
 
             // 날씨 카테고리 나눠야 나중에 temprange로 나눌수 있음
             switch (category) {
                 case "TMX":
-                    if ("1500".equals(item.getFcstTime()))
+                    
                     builder.maxTemperature(Double.parseDouble(value));
                     break;
                 case "TMN": // 최저 기온
-                    if ("0600".equals(item.getFcstTime()))
+                   
                     builder.minTemperature(Double.parseDouble(value));
                     break;
                 case "REH": // 습도
@@ -231,14 +243,36 @@ public class WeatherService {
                 dateTimeSet = true;
             }
         }
+       
+       List<DailyForecastDTO> dailyForecasts = new ArrayList<>();
+       
+        List<String> dates = items.getItem().stream()
+        //모든 예보에서 날짜만 뽑기
+                .map(VillageForecastResponse.Item::getFcstDate)
+                //오늘 이전 날짜 버리기
+                .filter(d->d.compareTo(today)>=0)
+                //중복 제거
+                .distinct()
+                //날짜 순 정렬
+                .sorted()
+                //리스트로 변환
+                .toList();
+       
+       for(String date : dates){
+        List<VillageForecastResponse.Item> dailyItems = items.getItem().stream()
+                .filter(i -> i.getFcstDate().equals(date))
+                .toList();
+                dailyForecasts.add(buildDaily(date, dailyItems));
+    }
+       builder.dailyForecasts(dailyForecasts);
+       
         return builder.build();
 
     }
 
 
     //위경도 기반 통합 날씨 lat, lon
-    // @Cacheable( cacheNames = "integratedWeatherCache",
-    //  key = "#longitude + '_' + #latitude")
+
     public Mono<IntegratedWeatherDto> getIntegratedWeatherByCoordinates(double latitude,double longitude) {
         log.info("위경도 기반 통합 날씨 정보 조회 시작: lat={}, lon={}", latitude, longitude);
         long startTime = System.currentTimeMillis();
@@ -451,5 +485,45 @@ public class WeatherService {
         
         return "MongoDB에 날씨 정보 저장 완료";
     }
+
+
+
+    
+    private DailyForecastDTO buildDaily(String date, List<VillageForecastResponse.Item> dayItems) {
+    Double max = null, min = null;
+    Integer pop = null;
+    String sky = null, firstSky = null, pty = "없음";
+
+    for (VillageForecastResponse.Item i : dayItems) {
+        String v = i.getFcstValue();
+        switch (i.getCategory()) {
+            case "TMX" -> max = Double.parseDouble(v);
+            case "TMN" -> min = Double.parseDouble(v);
+            case "POP" -> { int p = Integer.parseInt(v); if (pop == null || p > pop) pop = p; }   // 그날 최대값
+            case "SKY" -> {
+                if (firstSky == null) firstSky = skyText(v);
+                if ("1500".equals(i.getFcstTime())) sky = skyText(v);   // 대표: 낮 3시
+            }
+            case "PTY" -> { if (!"0".equals(v) && "없음".equals(pty)) pty = ptyText(v); } // 우산 필요 여부가 중요해서 "한 번이라도"
+            default -> { }
+        }
+    }
+    return DailyForecastDTO.builder()
+            .date(LocalDate.parse(date, D))
+            .maxTemperature(max).minTemperature(min)
+            .skyCondition(sky != null ? sky : firstSky)
+            .precipitationType(pty)
+            .precipitationProbability(pop)
+            .build();
+}
+
+    private String skyText(String v) {
+        return switch (v) { case "1" -> "맑음"; case "3" -> "구름많음"; case "4" -> "흐림"; default -> null; };
+    }
+
+    private String ptyText(String v) {
+        return switch (v) { case "0" -> "없음"; case "1" -> "비"; case "2" -> "비/눈"; case "3" -> "눈"; case "4" -> "소나기"; default -> null; };
+    }
+
 
 }
