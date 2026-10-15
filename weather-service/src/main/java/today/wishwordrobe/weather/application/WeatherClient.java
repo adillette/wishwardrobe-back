@@ -37,10 +37,13 @@ public class WeatherClient {
     @Autowired
     private  AirKoreaConfig airKoreaConfig; // 미세먼지 농도 api 연결하기 위한 환경 설정
   
+    
+
+
 
    //격자 좌표 조회
     public Mono<VillageForecastResponse> getVillageForecast(Geographic location) {
-        Map<String, String> baseDateTime = calculateBaseTime();
+        Map<String, String> baseDateTime = calculateDailyBaseTime();
         String baseDate = baseDateTime.get("baseDate");
         String baseTime = baseDateTime.get("baseTime");
 
@@ -48,8 +51,6 @@ public class WeatherClient {
         String encodedApiKey = rawKey == null ? null
                 : (rawKey.contains("%") ? rawKey :URLEncoder.encode(rawKey, StandardCharsets.UTF_8));
 
-
-      
         URI uri = UriComponentsBuilder
                 .fromUriString(config.getBaseUrl())//fromHttpUrl → fromUriString으로 변경
                 .path(config.getVillageFcstUrl()) // application.yml의 /getVilageFcst 사용
@@ -95,6 +96,25 @@ public class WeatherClient {
                     )
                 );
     }
+
+    private Map<String,String> calculateDailyBaseTime(){
+        LocalDateTime now = LocalDateTime.now(KST);
+        DateTimeFormatter df = DateTimeFormatter.ofPattern("yyyyMMdd");
+        Map<String,String> result = new HashMap<>();
+        if(now.isBefore(now.toLocalDate().atTime(2,10))){
+            
+            result.put("baseDate", now.minusDays(1).format(df));
+            result.put("baseTime", "2300");
+        }else{
+            result.put("baseDate", now.format(df));
+            result.put("baseTime", "0200");
+        }
+        return result;
+    }
+
+
+
+
 
     private Map<String, String> calculateBaseTime() {
         LocalDateTime now = LocalDateTime.now(KST);
