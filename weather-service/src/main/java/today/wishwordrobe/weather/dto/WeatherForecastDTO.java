@@ -2,6 +2,7 @@ package today.wishwordrobe.weather.dto;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -46,6 +47,9 @@ public class WeatherForecastDTO {
 
     private LocalDate baseDate;
     private LocalTime baseTime;
+
+    //오늘 내일 모레 날씨 저장을 위한 list추가
+    private List<DailyForecastDTO> dailyForecasts;
 
 
 }
