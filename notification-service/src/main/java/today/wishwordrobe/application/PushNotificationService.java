@@ -253,11 +253,18 @@ public class PushNotificationService {
                 .doOnSuccess(v -> log.info("사용자 FCM 토큰 전체 삭제: userId={}", userId));
     }
 
-    //유저별 전송 메서드
+    //이미지 추가전 유저별 전송 메서드
     public Mono<ChannelSendResult> sendToUserWithChannelCheck(Long userId, String title, String body){
+        return sendToUserWithChannelCheck(userId, title, body, null);
+    }
+
+
+    //유저별 전송 메서드
+    public Mono<ChannelSendResult> sendToUserWithChannelCheck(Long userId, String title, String body,String imageUrl) {
         WebPushNotificationRequest request= WebPushNotificationRequest.builder()
                                                 .title(title)
                                                 .message(body)
+                                                .image(imageUrl)
                                                 .build();
 
         Mono<Boolean> hasFcm= fcmService.hasActiveToken(userId);
@@ -274,7 +281,7 @@ public class PushNotificationService {
                 }
 
                 Mono<Boolean> fcmResult=fcmExists? 
-                    fcmService.sendMessageToUser(userId, title, body)
+                    fcmService.sendMessageToUser(userId, title, body,imageUrl)
                     .then(Mono.just(true))
                     .onErrorReturn(false)
                     : Mono.just(false);

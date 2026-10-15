@@ -74,25 +74,34 @@ public class FCMService {
 
     public Mono<String> sendTokenMessage(FCMPushNotificationRequest request) {
         return Mono.fromCallable(() -> {
+            //1. firebase 메시지 조립 시작
             Message.Builder builder = Message.builder()
+            //2. 사용자 화면에 보일 알림내용 알림창의 제목 본문 큰 이미지
                     .setNotification(Notification.builder()
                             .setTitle(request.getTitle())
                             .setBody(request.getMessage())
+                            .setImage(request.getImage())
                             .build())
+                            //3. 받을 기기 fcm 토큰 한개
                     .setToken(request.getToken());
-
+            // 4. 추가 데이터 있으면 data 영역에 담는다
             if (request.getData() != null && !request.getData().isEmpty()) {
                 builder.putAllData(request.getData());
             }
 
             Message message = builder.build();
+            //5. firebase 서버로 발송하고 응답을 받아온다
             return sendAndGetResponse(message);
         })
+        // 6. 위의 블로킹 호출을 Netty 이벤트 루프가 아니라 블로킹용 스레드 풀에서 실행
                 .subscribeOn(Schedulers.boundedElastic())
+                   // 7. 발송 성공하면 이 토큰의 마지막 사용 시각을 DB에 갱신 (7일 미사용 토큰 정리 기준)
                 .flatMap(response ->
                     // 전송 성공 시 lastUsedAt 업데이트
                     updateLastUsedAt(request.getToken()).thenReturn(response)
                 )
+                 // 8. 발송 실패하면 오류 코드를 보고 처리 (토큰이 만료(UNREGISTERED)된 경우 DB에서 삭제)
+
                 .onErrorResume(ExecutionException.class, e ->
                     handleExecutionException(request.getToken(), e)
                 );
@@ -211,10 +220,15 @@ public class FCMService {
                 });
     }
 
-    /**
-     * 사용자별로 메시지 전송
-     */
+
+    // 사용자별 메시지 전송 이미지 추가전
     public Flux<String> sendMessageToUser(Long userId, String title, String body) {
+        return sendMessageToUser(userId, title, body, null);
+    }
+    
+    // 사용자별로 메시지 전송
+    
+    public Flux<String> sendMessageToUser(Long userId, String title, String body,String imageUrl) {
         return fcmtokenRepository.findByUserIdAndIsActive(userId, true)
                 .doOnSubscribe(s -> log.info("사용자 FCM 메시지 전송 시작 - userId: {}", userId))
                 .flatMap(fcmToken -> {
@@ -222,6 +236,7 @@ public class FCMService {
                             .token(fcmToken.getToken())
                             .title(title)
                             .message(body)
+                            .image(imageUrl)
                             .build();
                     return sendTokenMessage(req)
                             .onErrorResume(e -> {
