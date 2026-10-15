@@ -58,7 +58,7 @@ class NotificationConsumerTest {
                 .thenReturn(Mono.just(pendingOutbox));
         when(messageBuilder.buildTitle(any())).thenReturn("오늘의 날씨 맑음 | 맑음");
         when(messageBuilder.buildBody(any())).thenReturn("최고 28°C / 최저 18°C\n추천 옷: 반팔");
-        when(pushNotificationService.sendToUserWithChannelCheck(any(), any(), any()))
+        when(pushNotificationService.sendToUserWithChannelCheck(any(), any(), any(),any()))
                 .thenReturn(Mono.just(ChannelSendResult.SENT));
         when(outboxEventService.markAsSent(any())).thenReturn(Mono.just(sentOutbox));
 
@@ -70,7 +70,7 @@ class NotificationConsumerTest {
         verify(outboxEventService).saveWithLock(eq("evt-001"), eq(123L),
                 eq("CLOTHES_MATCHED"), any());
         verify(pushNotificationService).sendToUserWithChannelCheck(
-                eq(123L), anyString(), anyString());
+                eq(123L), anyString(), anyString(), any());
         verify(outboxEventService).markAsSent(pendingOutbox);
     }
 
@@ -84,7 +84,7 @@ class NotificationConsumerTest {
                 .thenReturn(Mono.just(pendingOutbox));
         when(messageBuilder.buildTitle(any())).thenReturn("제목");
         when(messageBuilder.buildBody(any())).thenReturn("본문");
-        when(pushNotificationService.sendToUserWithChannelCheck(any(), any(), any()))
+        when(pushNotificationService.sendToUserWithChannelCheck(any(), any(), any(),any()))
                 .thenReturn(Mono.just(ChannelSendResult.NO_CHANNEL));
         when(outboxEventService.markAsNoChannel(any(), any())).thenReturn(Mono.just(noChannelOutbox));
 
@@ -105,7 +105,7 @@ class NotificationConsumerTest {
                 .thenReturn(Mono.just(pendingOutbox));
         when(messageBuilder.buildTitle(any())).thenReturn("제목");
         when(messageBuilder.buildBody(any())).thenReturn("본문");
-        when(pushNotificationService.sendToUserWithChannelCheck(any(), any(), any()))
+        when(pushNotificationService.sendToUserWithChannelCheck(any(), any(), any(), any()))
                 .thenReturn(Mono.just(ChannelSendResult.FAILED));
         when(outboxEventService.markAsFailed(any(), any())).thenReturn(Mono.just(failedOutbox));
 
@@ -126,7 +126,7 @@ class NotificationConsumerTest {
         consumer.handleClothesMatchedEvent(sampleEvent());
         awaitAsync();
 
-        verify(pushNotificationService, never()).sendToUserWithChannelCheck(any(), any(), any());
+        verify(pushNotificationService, never()).sendToUserWithChannelCheck(any(), any(), any(), any());
     }
 
     @Test
@@ -136,7 +136,7 @@ class NotificationConsumerTest {
                 .thenReturn(Mono.just(pendingOutbox));
         when(messageBuilder.buildTitle(any())).thenReturn("제목");
         when(messageBuilder.buildBody(any())).thenReturn("본문");
-        when(pushNotificationService.sendToUserWithChannelCheck(any(), any(), any()))
+        when(pushNotificationService.sendToUserWithChannelCheck(any(), any(), any(), any()))
                 .thenReturn(Mono.error(new RuntimeException("FCM 연결 실패")));
         when(outboxEventService.markAsFailed(any(), any())).thenReturn(Mono.just(pendingOutbox));
 

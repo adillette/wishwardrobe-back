@@ -94,6 +94,37 @@ class NotificationMessageBuilderTest {
             assertThat(body).contains("패딩");
         }
 
+//-------------------
+    @Nested
+    @DisplayName("buildImageUrl")
+    class BuildImageUrl {
+
+        @Test
+        @DisplayName("이미지 주소가 있는 첫 번째 옷의 주소를 반환")
+        void first_image() {
+            ClothesItemDto a = new ClothesItemDto();
+            a.setName("a");
+            ClothesItemDto b = new ClothesItemDto();
+            b.setName("b");
+            b.setImageUrl("https://x/b.png");
+
+            ClothesMatchedEvent event = event("맑음", "없음", 25.0, 15.0, List.of(a, b));
+
+            assertThat(builder.buildImageUrl(event)).isEqualTo("https://x/b.png");
+        }
+
+        @Test
+        @DisplayName("추천 옷이 없으면 null")
+        void no_image() {
+            ClothesMatchedEvent event = event("맑음", "없음", 25.0, 15.0, List.of());
+
+            assertThat(builder.buildImageUrl(event)).isNull();
+        }
+    }
+
+
+
+
         @Test
         @DisplayName("추천 옷 없음 → 옷 정보 없음")
         void no_clothes() {
@@ -115,6 +146,8 @@ class NotificationMessageBuilderTest {
             assertThat(body).doesNotContain("추천 옷");
         }
     }
+
+   
 
     // ───── helpers ────────────────────────────────────────────────────────────
 

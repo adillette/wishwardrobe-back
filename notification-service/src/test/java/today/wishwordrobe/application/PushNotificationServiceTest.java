@@ -60,7 +60,7 @@ class PushNotificationServiceTest {
         void fcm_success() {
             when(fcmService.hasActiveToken(USER_ID)).thenReturn(Mono.just(true));
             when(webPushService.hasActiveSubscription(USER_ID)).thenReturn(Mono.just(false));
-            when(fcmService.sendMessageToUser(eq(USER_ID), anyString(), anyString()))
+            when(fcmService.sendMessageToUser(eq(USER_ID), anyString(), anyString(),any()))
                     .thenReturn(Flux.just("msg-id-001"));
 
             StepVerifier.create(service.sendToUserWithChannelCheck(USER_ID, TITLE, BODY))
@@ -73,7 +73,7 @@ class PushNotificationServiceTest {
         void fcm_failure() {
             when(fcmService.hasActiveToken(USER_ID)).thenReturn(Mono.just(true));
             when(webPushService.hasActiveSubscription(USER_ID)).thenReturn(Mono.just(false));
-            when(fcmService.sendMessageToUser(eq(USER_ID), anyString(), anyString()))
+            when(fcmService.sendMessageToUser(eq(USER_ID), anyString(), anyString(), any()))
                     .thenReturn(Flux.error(new RuntimeException("FCM 연결 실패")));
 
             StepVerifier.create(service.sendToUserWithChannelCheck(USER_ID, TITLE, BODY))
@@ -152,7 +152,7 @@ class PushNotificationServiceTest {
         void both_success() {
             when(fcmService.hasActiveToken(USER_ID)).thenReturn(Mono.just(true));
             when(webPushService.hasActiveSubscription(USER_ID)).thenReturn(Mono.just(true));
-            when(fcmService.sendMessageToUser(eq(USER_ID), anyString(), anyString()))
+            when(fcmService.sendMessageToUser(eq(USER_ID), anyString(), anyString(), any()))
                     .thenReturn(Flux.just("msg-id-002"));
             when(webPushService.sendToUser(eq(USER_ID), any()))
                     .thenReturn(Mono.just(new WebPushSendSummary(1, 0, 0)));
@@ -167,7 +167,7 @@ class PushNotificationServiceTest {
         void fcm_fail_webpush_ok() {
             when(fcmService.hasActiveToken(USER_ID)).thenReturn(Mono.just(true));
             when(webPushService.hasActiveSubscription(USER_ID)).thenReturn(Mono.just(true));
-            when(fcmService.sendMessageToUser(eq(USER_ID), anyString(), anyString()))
+            when(fcmService.sendMessageToUser(eq(USER_ID), anyString(), anyString(), any()))
                     .thenReturn(Flux.error(new RuntimeException("FCM 오류")));
             when(webPushService.sendToUser(eq(USER_ID), any()))
                     .thenReturn(Mono.just(new WebPushSendSummary(1, 0, 0)));
@@ -182,7 +182,7 @@ class PushNotificationServiceTest {
         void fcm_ok_webpush_fail() {
             when(fcmService.hasActiveToken(USER_ID)).thenReturn(Mono.just(true));
             when(webPushService.hasActiveSubscription(USER_ID)).thenReturn(Mono.just(true));
-            when(fcmService.sendMessageToUser(eq(USER_ID), anyString(), anyString()))
+            when(fcmService.sendMessageToUser(eq(USER_ID), anyString(), anyString(), any()))
                     .thenReturn(Flux.just("msg-id-003"));
             when(webPushService.sendToUser(eq(USER_ID), any()))
                     .thenReturn(Mono.just(new WebPushSendSummary(0, 0, 1)));
@@ -197,7 +197,7 @@ class PushNotificationServiceTest {
         void both_fail() {
             when(fcmService.hasActiveToken(USER_ID)).thenReturn(Mono.just(true));
             when(webPushService.hasActiveSubscription(USER_ID)).thenReturn(Mono.just(true));
-            when(fcmService.sendMessageToUser(eq(USER_ID), anyString(), anyString()))
+            when(fcmService.sendMessageToUser(eq(USER_ID), anyString(), anyString(), any()))
                     .thenReturn(Flux.error(new RuntimeException("FCM 오류")));
             when(webPushService.sendToUser(eq(USER_ID), any()))
                     .thenReturn(Mono.just(new WebPushSendSummary(0, 0, 1)));
