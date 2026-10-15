@@ -71,6 +71,15 @@ public class WeatherClient {
                 .uri(uri) // ★ String 말고 URI로 넘기기
                 .retrieve()
                 .bodyToMono(VillageForecastResponse.class)
+                .doOnNext(res->{
+                    var body= res.getResponse().getBody();
+                    int received=body.getItems().getItem().size();
+                    log.info("예보 응답 -totalCount:{}, 수신:{}",body.getTotalCount(),received);
+                    if (body.getTotalCount() > received) {
+        log.warn("예보 응답이 잘렸습니다. numOfRows를 늘려야 합니다. totalCount={}, 수신={}", body.getTotalCount(), received);
+    }
+               
+                })
                 .retryWhen(Retry.backoff(3, Duration.ofSeconds(2))
                     .filter(throwable -> {
                         // 429 에러는 재시도

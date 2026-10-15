@@ -14,6 +14,7 @@ import lombok.Setter;
 import today.wishwordrobe.weather.dto.AirQualityDto;
 import today.wishwordrobe.weather.dto.UVIndexDto;
 
+//mongodb에 저장되는 날씨 정보임
 
 @Document 
 @Getter 

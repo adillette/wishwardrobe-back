@@ -6,6 +6,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.ToString;
 
+//하루단위 요약한 값
+//이틀전 엊그제 날씨를 불러오기 위해 만들었음
 @Getter
 @Builder
 @ToString
