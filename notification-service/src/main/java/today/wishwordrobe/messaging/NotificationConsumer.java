@@ -49,9 +49,12 @@ public class NotificationConsumer {
       OutboxEvent outboxEvent) {
     String title = messageBuilder.buildTitle(event);
     String body = messageBuilder.buildBody(event);
+    String imageUrl=messageBuilder.buildImageUrl(event);
+    log.info("알림 대표 이미지 userId={}, imageUrl={}", event.getUserId(), imageUrl);
+
   
     // // Mono<WebPushSendSummary> → Mono<Void>
-    return pushNotificationService.sendToUserWithChannelCheck(event.getUserId(), title, body)
+    return pushNotificationService.sendToUserWithChannelCheck(event.getUserId(), title, body,imageUrl)
         .flatMap(result -> switch (result) {
           case SENT ->outboxEventService.markAsSent(outboxEvent);
           case NO_CHANNEL->outboxEventService.markAsNoChannel(outboxEvent, "등록된 채널 없음");
