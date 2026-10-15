@@ -41,4 +41,16 @@ public class NotificationMessageBuilder {
     }
     return tempInfo+clothesInfo;
   }
+
+
+   public String buildImageUrl(ClothesMatchedEvent event) {
+        if(event.getRecommendedClothes()==null) return null;
+
+        
+        return event.getRecommendedClothes().stream()
+                .map(ClothesItemDto::getImageUrl)
+                .filter(url -> url != null && !url.isBlank())
+                .findFirst()
+                .orElse(null); 
+    }
 }
