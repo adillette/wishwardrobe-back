@@ -74,7 +74,7 @@ public class WeatherEventConsumer {
         r.getClothesId(),
         r.getName(),
         r.getCategory().name(),
-        r.getImageUrl()
+        imageUrl
       );
     }
 
