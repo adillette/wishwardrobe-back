@@ -44,7 +44,7 @@ dependencies {
     // runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.5'
 
     // Password Encryption (BCrypt)
-    implementation 'at.favre.lib:bcrypt:0.10.2'
+    // implementation 'at.favre.lib:bcrypt:0.10.2'
 
     // Database
    runtimeOnly 'org.postgresql:postgresql'
