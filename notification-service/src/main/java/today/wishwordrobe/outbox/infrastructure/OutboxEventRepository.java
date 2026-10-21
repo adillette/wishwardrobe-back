@@ -13,6 +13,10 @@ public interface OutboxEventRepository extends ReactiveMongoRepository<OutboxEve
   // OutboxProcessor 재처리 대상 조회
   Flux<OutboxEvent> findByStatusAndRetryCountLessThan(
             OutboxStatus status, int maxRetry);
+  //재처리 대상 조회
+  Flux<OutboxEvent> findByStatusAndRetryCountLessThanAndCreatedAtBefore(
+        OutboxStatus status, int maxRetry, LocalDateTime before);
+
   //실패 상태 중 재시도 횟수 초과한 것 조회
   //모니터링 및 수동 재처리 대상 확인
   Flux<OutboxEvent> findByStatusAndRetryCountGreaterThanEqual(OutboxStatus status,int maxRetry);
