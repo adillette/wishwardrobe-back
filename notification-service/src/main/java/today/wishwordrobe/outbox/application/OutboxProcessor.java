@@ -61,8 +61,8 @@ public void cleanupSentEvents(){
       ClothesMatchedEvent clothesMatchedEvent = objectMapper.readValue(event.getPayload(), ClothesMatchedEvent.class);
       String title=messageBuilder.buildTitle(clothesMatchedEvent);
       String body= messageBuilder.buildBody(clothesMatchedEvent);
-      
-      return pushNotificationService.sendToUserWithChannelCheck(event.getUserId(), title, body)
+      String imageUrl = messageBuilder.buildImageUrl(clothesMatchedEvent);
+      return pushNotificationService.sendToUserWithChannelCheck(event.getUserId(), title, body,imageUrl)
         .flatMap(results->switch (results) {
           case SENT -> outboxEventService.markAsSent(event);
           case NO_CHANNEL -> outboxEventService.markAsNoChannel(event, "등록된 채널 없음");
