@@ -2,7 +2,7 @@ package today.wishwordrobe.user.application;
 
 import org.springframework.stereotype.Service;
 
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import today.wishwordrobe.user.domain.Users;
 import today.wishwordrobe.user.infrastructure.UserRepository;
