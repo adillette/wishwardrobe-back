@@ -39,8 +39,8 @@ public class DistributedLockService {
    */
 
   private String buildLockKey(Long userId, String eventId){
-    String today=LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyMMdd"));
-    return LOCK_PREFIX+String.valueOf(userId)+ ":"+ today+":"+eventId;
+    String today=LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+    return LOCK_PREFIX+ ":" +String.valueOf(userId)+ ":"+ today+":"+eventId;
   }
 
   //trylock: redis set nx ex(atomic 명령어)
@@ -64,12 +64,14 @@ public class DistributedLockService {
     String lockValue= UUID.randomUUID().toString();// 소유권 식별자
 
     return reactiveRedisTemplate.opsForValue()
-              .setIfAbsent(lockKey, lockValue, LOCK_TTL)
-              .map(acquired-> Boolean.TRUE.equals(acquired)? lockValue: null)
-              .doOnNext(val-> { 
-                if (val != null) log.debug("락 획득. userId={}, eventId={}", userId, eventId);
-                else log.warn("락 획득 실패 - 중복 차단. userId={}, eventId={}", userId, eventId);
-              }); 
+        .setIfAbsent(lockKey, lockValue, LOCK_TTL)
+        .filter(Boolean.TRUE::equals)           // 실패면 빈 Mono로 흘러감
+        .map(acquired -> lockValue)
+        .doOnNext(v -> log.debug("락 획득. userId={}, eventId={}", userId, eventId))
+        .switchIfEmpty(Mono.defer(() -> {
+            log.warn("락 획득 실패 - 중복 차단. userId={}, eventId={}", userId, eventId);
+            return Mono.empty();
+        }));
   }
 
   public Mono<Boolean> releaseLock(Long userId, String eventId, String lockValue){

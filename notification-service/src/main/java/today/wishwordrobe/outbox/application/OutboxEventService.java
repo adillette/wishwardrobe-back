@@ -79,7 +79,7 @@ public class OutboxEventService {
     event.setProcessedAt(LocalDateTime.now());
 
     return outboxEventRepository.save(event)
-            .doOnSuccess(e->log.info("Outbox SETN.eventId={}, userId={}",event.getEventId(),event.getUserId()));
+            .doOnSuccess(e->log.info("Outbox SENT.eventId={}, userId={}",event.getEventId(),event.getUserId()));
   }
 
   //MarkAsFailed: FCM/WebPush 전송 실패 처리
@@ -87,7 +87,7 @@ public class OutboxEventService {
   //초과시 Failed 마킹
   // failureReason 저장 -> 실패 원인 추적 가능
   public Mono<OutboxEvent> markAsFailed(OutboxEvent event,String reason){
-    event.setRetryCount(event.getRetryCount());
+    event.setRetryCount(event.getRetryCount()+1);
     event.setFailureReason(reason);
     if(event.getRetryCount()>=MAX_RETRY){
       event.setStatus(OutboxStatus.FAILED);
@@ -108,7 +108,7 @@ public class OutboxEventService {
   //서버 재시작 후 미처리 건 자동 재처리
   public Flux<OutboxEvent> getPendingEvents(){
     return outboxEventRepository
-            .findByStatusAndRetryCountLessThan(OutboxStatus.PENDING, MAX_RETRY)
+            .findByStatusAndRetryCountLessThanAndCreatedAtBefore(OutboxStatus.PENDING, MAX_RETRY, LocalDateTime.now().minusMinutes(2))
             .doOnNext(e->log.info("재처리대상 eventId={}, retryCount={}",
             e.getEventId(),e.getRetryCount()));
           }
