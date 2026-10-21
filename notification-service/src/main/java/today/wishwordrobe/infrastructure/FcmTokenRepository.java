@@ -17,6 +17,8 @@ import java.time.LocalDateTime;
  */
 public interface FcmTokenRepository extends ReactiveMongoRepository<FcmTokenDocument, String> {
 
+
+
     //전체 활성 토큰 조회 메서드
     Flux<FcmTokenDocument> findByIsActive(Boolean isActive);
     //특정 사용자의 모든 토큰 조회

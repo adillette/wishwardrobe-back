@@ -4,7 +4,6 @@ package today.wishwordrobe.firebase;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,7 +18,6 @@ import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;
 import com.google.firebase.messaging.Notification;
 
-import java.util.concurrent.TimeoutException; 
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -32,6 +30,7 @@ import today.wishwordrobe.presentation.dto.FcmTokenRequest;
 @Service
 public class FCMService {
 
+   
     @Autowired
     private FcmTokenRepository fcmtokenRepository;
     private final Logger logger = LoggerFactory.getLogger(FCMService.class);
@@ -43,6 +42,7 @@ public class FCMService {
             .findByUserIdAndIsActive(userId, true)
             .hasElements();
 }
+
 
 
     public Mono<String> sendPushNotification(FCMPushNotificationRequest request) {
@@ -165,7 +165,8 @@ public class FCMService {
                 .flatMap(existing -> {
                     existing.setLastUsedAt(LocalDateTime.now());
                     existing.setIsActive(true);
-                    // log.info("기존 FCM 토큰 재활성화 - userId: {}", request.getUserId());
+                    existing.setUserId(request.getUserId());
+                    existing.setDeviceId(request.getDeviceId());
                     return fcmtokenRepository.save(existing);
                 })
                 .switchIfEmpty(Mono.defer(() -> {

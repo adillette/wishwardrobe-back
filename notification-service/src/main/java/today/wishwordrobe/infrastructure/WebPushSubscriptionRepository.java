@@ -24,4 +24,5 @@ public interface WebPushSubscriptionRepository extends ReactiveMongoRepository<W
   Flux<WebPushSubscriptionDocument> findByLastUsedAtBeforeAndIsActive(LocalDateTime date, boolean isActive);
 //사용자 전체 구독 삭제
   Mono<Void> deleteByUserId(Long userId);
+
 }

@@ -3,6 +3,8 @@ package today.wishwordrobe.user.domain;
 import java.time.LocalDateTime;
 
 import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -15,7 +17,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class Users {
-    @Id  
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private Long userId;
     private String userName;
     private String userEmail;
@@ -25,6 +28,8 @@ public class Users {
     private String phone;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    //저장할 기기 등록 제한
 
    
 }

@@ -46,6 +46,9 @@ public class WebPushService {
         this.pushAsyncService = pushAsyncService;
         this.asyncHttpClient = asyncHttpClient;
     }
+
+
+
     public Mono<Boolean> hasActiveSubscription(Long userId) {
     return webPushSubscriptionRepository
             .findByUserIdAndIsActive(userId, true)
@@ -85,7 +88,8 @@ public class WebPushService {
     private Mono<Void> enforceWebPushDeviceLimit(Long userId) {
         return webPushSubscriptionRepository
                 .findByUserIdAndIsActiveOrderByLastUsedAtAsc(userId, true)
-                .skip(MAX_DEVICES_PER_USER)
+                //뒤에서 max-1 개 가장 최신 2개 남기고 오래된거 삭제
+                .skipLast(MAX_DEVICES_PER_USER-1)
                 .flatMap(oldest -> {
                     log.warn("WebPush 디바이스 제한 초과 - 삭제: userId={}, endpoint={}",
                             userId, oldest.getEndpoint());

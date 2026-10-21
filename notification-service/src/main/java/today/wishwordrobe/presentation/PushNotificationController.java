@@ -25,8 +25,11 @@ import today.wishwordrobe.presentation.dto.PushNotificationRequest;
 import today.wishwordrobe.presentation.dto.UserLocationRequest;
 import today.wishwordrobe.presentation.dto.UserLocationResponse;
 import today.wishwordrobe.webpush.BroadcastJobService;
+import today.wishwordrobe.webpush.WebPushUnscribeRequest;
 import today.wishwordrobe.webpush.BroadcastJobService.JobView;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
 
 
 @Slf4j
@@ -61,6 +64,16 @@ public class PushNotificationController {
                 .then(Mono.just(ResponseEntity.ok().build()));
     }
 
+    @PostMapping("/unsubscribe")
+    public Mono<ResponseEntity<String>> unscribe(@RequestBody WebPushUnscribeRequest request) {
+        
+        if(request.endpoint==null || request.endpoint.isEmpty()){
+            return Mono.just(ResponseEntity.badRequest().body("endpoint is required"));
+        }
+        
+        return pushNotificationService.unregisterWebPushSubscription(request.endpoint)
+                .then(Mono.just(ResponseEntity.ok().build()));
+    }
    
     @PostMapping("/send-topic")
     public Mono<ResponseEntity<String>> sendTopicNotification(@RequestBody FCMPushNotificationRequest request) {
@@ -148,6 +161,8 @@ public class PushNotificationController {
         return pushNotificationService.unregisterAllFcmTokensByUserId(userId)
                 .then(Mono.just(ResponseEntity.ok("All FCM tokens unregistered for userId: " + userId)));
     }
+
+
 
     
 }
