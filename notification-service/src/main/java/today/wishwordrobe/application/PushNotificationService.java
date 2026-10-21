@@ -1,6 +1,7 @@
 package today.wishwordrobe.application;
 
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -20,6 +21,8 @@ import reactor.core.publisher.Mono;
 import today.wishwordrobe.firebase.FCMPushNotificationRequest;
 import today.wishwordrobe.firebase.FCMService;
 import today.wishwordrobe.infrastructure.FcmTokenRepository;
+import today.wishwordrobe.infrastructure.NotificationPreferenceDocument;
+import today.wishwordrobe.infrastructure.NotificationPreferenceRepository;
 import today.wishwordrobe.infrastructure.WebPushSubscriptionRepository;
 import today.wishwordrobe.presentation.dto.FcmTokenDocument;
 import today.wishwordrobe.presentation.dto.FcmTokenRequest;
@@ -33,6 +36,8 @@ import today.wishwordrobe.webpush.WebPushSubscription;
 @Slf4j
 public class PushNotificationService {
 
+
+    private final NotificationPreferenceRepository preferenceRepository;
     private final MeterRegistry meterRegistry;
     private final FCMService fcmService;
     private final FcmTokenRepository fcmTokenRepository;
@@ -80,11 +85,13 @@ public class PushNotificationService {
     }
 
     public PushNotificationService(
+            NotificationPreferenceRepository preferenceRepository,
             MeterRegistry meterRegistry,
             FCMService fcmService,
             FcmTokenRepository fcmTokenRepository,
             WebPushSubscriptionRepository webPushSubscriptionRepository,
             WebPushService webPushService) {
+        this.preferenceRepository=preferenceRepository;
         this.meterRegistry = meterRegistry;
         this.fcmService = fcmService;
         this.fcmTokenRepository = fcmTokenRepository;
@@ -214,6 +221,26 @@ public class PushNotificationService {
                         "BroadcastStats: total={}, success={}, failed={}",
                         stats.total(), stats.success(), stats.failed()));
     }
+   //선호 저장하기
+   public Mono<Void> savePreference(Long userId, String channel){
+    return preferenceRepository.save(
+            NotificationPreferenceDocument
+            .builder()
+            .userId(userId)
+            .preferredChannel(channel)
+            .updatedAt(LocalDateTime.now())
+            .build())
+            .then();
+   }
+
+   //선호 조회하기
+   public Mono<String> getPreference(Long userId){
+    return preferenceRepository.findById(userId)
+            .map(NotificationPreferenceDocument::getPreferredChannel)
+            .defaultIfEmpty("NONE");
+   }
+
+
 
     public Mono<Void> saveSubscription(Map<String, Object> subscriptionMap) {
         Long userId = Long.valueOf(String.valueOf(subscriptionMap.get("userId")));
@@ -232,12 +259,13 @@ public class PushNotificationService {
 
         subscription.setKeys(k);
 
-        return webPushService.saveWebPushSubscription(userId, subscription).then();
+        return webPushService.saveWebPushSubscription(userId, subscription).then(savePreference(userId,"WEBPUSH"));
     }
 
     // FCMService에 위임
     public Mono<FcmTokenDocument> registerFcmToken(FcmTokenRequest request) {
-        return fcmService.saveToken(request);
+        return fcmService.saveToken(request)
+        .flatMap(saved-> savePreference(request.getUserId(), "FCM").thenReturn(saved));
     }
 
     // 토큰 1개 삭제
@@ -280,12 +308,20 @@ public class PushNotificationService {
 
                     Mono<Boolean> fcmResult = fcmExists ? fcmService.sendMessageToUser(userId, title, body, imageUrl)
                             .then(Mono.just(true))
-                            .onErrorReturn(false)
+                            .onErrorResume(e->{
+                                log.error("FCM 전송 실패 userId={}",userId,e);
+                                return Mono.just(false);
+                            })
+
                             : Mono.just(false);
 
                     Mono<Boolean> webPushResult = webPushExists ? webPushService.sendToUser(userId, request)
                             .map(s -> s.success > 0 || s.expired > 0)// 전송 시도자체는 성공
-                            .onErrorReturn(false)
+                            .onErrorResume(e->{
+                                log.error("Webpush 전송 실패 userId={}",userId,e);
+                                return Mono.just(false);
+                            })
+
                             : Mono.just(false);
 
                     return Mono.zip(fcmResult, webPushResult)

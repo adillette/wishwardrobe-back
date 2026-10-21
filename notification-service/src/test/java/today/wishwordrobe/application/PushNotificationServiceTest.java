@@ -13,6 +13,7 @@ import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 import today.wishwordrobe.firebase.FCMService;
 import today.wishwordrobe.infrastructure.FcmTokenRepository;
+import today.wishwordrobe.infrastructure.NotificationPreferenceRepository;
 import today.wishwordrobe.infrastructure.WebPushSubscriptionRepository;
 import today.wishwordrobe.webpush.WebPushSendSummary;
 import today.wishwordrobe.webpush.WebPushService;
@@ -31,7 +32,7 @@ class PushNotificationServiceTest {
     @Mock FcmTokenRepository fcmTokenRepository;
     @Mock WebPushSubscriptionRepository webPushSubscriptionRepository;
     @Mock WebPushService webPushService;
-
+    @Mock NotificationPreferenceRepository preferenceRepository;
     PushNotificationService service;
 
     private static final Long USER_ID = 123L;
@@ -41,6 +42,7 @@ class PushNotificationServiceTest {
     @BeforeEach
     void setUp() {
         service = new PushNotificationService(
+                preferenceRepository,
                 new SimpleMeterRegistry(),
                 fcmService,
                 fcmTokenRepository,

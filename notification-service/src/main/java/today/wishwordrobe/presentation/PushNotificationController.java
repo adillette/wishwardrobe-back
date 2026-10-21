@@ -4,6 +4,7 @@ import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
@@ -21,6 +23,7 @@ import today.wishwordrobe.firebase.FCMPushNotificationRequest;
 import today.wishwordrobe.infrastructure.UserLocationDocument;
 import today.wishwordrobe.presentation.dto.BroadcastJobStatus;
 import today.wishwordrobe.presentation.dto.FcmTokenRequest;
+import today.wishwordrobe.presentation.dto.NotificationPreferenceRequest;
 import today.wishwordrobe.presentation.dto.PushNotificationRequest;
 import today.wishwordrobe.presentation.dto.UserLocationRequest;
 import today.wishwordrobe.presentation.dto.UserLocationResponse;
@@ -139,6 +142,27 @@ public class PushNotificationController {
                         ResponseEntity.badRequest().body("Error: " + e.getMessage())));
     }
 
+    @PutMapping("/preference")
+    public Mono<ResponseEntity<String>> savePreference(@RequestBody NotificationPreferenceRequest request){  
+        Long userId= request.getUserId();
+        String channel = request.getChannel();
+        if (!"FCM".equals(channel) && !"WEBPUSH".equals(channel)) {
+        return Mono.error(
+            new ResponseStatusException(HttpStatus.BAD_REQUEST,
+             "userId와 channel(FCM 또는 WEBPUSH)이 필요합니다"));
+    }
+        
+        return pushNotificationService.savePreference(userId, channel)
+                .then(Mono.just(ResponseEntity.ok("Save preference")));
+    }
+
+    @GetMapping("/preference/{userId}")
+    public Mono<ResponseEntity<String>> getPreference(@PathVariable Long userId) {
+        return pushNotificationService.getPreference(userId)
+                .then(Mono.just(ResponseEntity.ok("userId의 선호도 읽기")));
+    }
+    
+
     // 특정 FCM 토큰 삭제 (디바이스 단위 로그아웃)
     @PostMapping("/fcm/unregister")
     public Mono<ResponseEntity<String>> unregisterFcmToken(@RequestBody Map<String, String> request) {
@@ -162,6 +186,7 @@ public class PushNotificationController {
                 .then(Mono.just(ResponseEntity.ok("All FCM tokens unregistered for userId: " + userId)));
     }
 
+  
 
 
     
