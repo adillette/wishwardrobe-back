@@ -22,37 +22,21 @@ public class LoginCheckInterceptor implements HandlerInterceptor{
     if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
       return true;
     }
-
-    if (!(handler instanceof HandlerMethod)) {
-      // 정적 리소스나 다른 핸들러는 통과
-      return true;
+   
+    // Authorization: Bearer xxxxxx
+    
+    String authorization = request.getHeader("Authorization");
+    
+    if (authorization == null || !authorization.startsWith("Bearer ")) {
+      response.sendError(HttpServletResponse.SC_UNAUTHORIZED,"JWT가 없습니다.");
+      return false; //prehandle의 반환값 여기서 중단하라는 뜻
+      // 토큰 없는 요청 막기 위해서
     }
 
-    HandlerMethod handlerMethod = (HandlerMethod) handler;
+    String jwt= authorization.substring(7);//"Bearer "까지가 7글자여서 
     
-
-    
-      String jwt=null;
-
-      String authorization = request.getHeader("Authorization");
-      if (authorization != null) {
-        // Authorization: Bearer xxxxxx
-        if (!authorization.substring(7).equals("")) {
-          jwt = authorization.substring(7);
-        }
-      }
-
-      if (jwt == null) {
-        response.sendError(HttpServletResponse.SC_FORBIDDEN, "JWT가 없습니다.");
-        return false;
-      } else {
-        if (jwtService.validateJwt(jwt)) {
-          return true;
-        } else {
-          response.sendError(HttpServletResponse.SC_FORBIDDEN, "JWT가 유효하지 않습니다.");
-          return false;
-        }
-      }
+    request.setAttribute(ATTR_AUTH_USER, jwtService.parseUser(jwt));
+    return true; // 다음 단계로 진행 인터셉터-> 컨트롤러 실행
     }
 
   }

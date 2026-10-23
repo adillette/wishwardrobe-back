@@ -1,9 +1,11 @@
 package today.wishwordrobe.user.application;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 import javax.crypto.SecretKey;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import io.jsonwebtoken.Claims;
@@ -22,13 +24,17 @@ import today.wishwordrobe.user.domain.AuthUser;
 @Service
 @Slf4j
 public class JwtService {
-  private String strKey = "com.wishwardrobe-back.secret.key";
+
+  // private String strKey = "com.wishwardrobe-back.secret.key";
+  // public JwtService() throws Exception {
+  //   byte[] bytes = strKey.getBytes();
+  //   secretKey = Keys.hmacShaKeyFor(bytes);
+  // }
   private SecretKey secretKey;
   private long jwtDuration = 90 * 24 * 60 *60;
 
-  public JwtService() throws Exception {
-    byte[] bytes = strKey.getBytes();
-    secretKey = Keys.hmacShaKeyFor(bytes);
+  public JwtService(@Value ("${JWT_SECRET}") String secret) {
+    this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
   }
 
   public String createJwt(Long userId, String loginId) {
