@@ -29,7 +29,6 @@ public class Users {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    //저장할 기기 등록 제한
 
    
 }
