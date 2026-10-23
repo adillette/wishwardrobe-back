@@ -38,19 +38,20 @@ dependencies {
 
     implementation 'org.springframework.boot:spring-boot-starter-data-redis-reactive'
 
-    // JWT
-    // implementation 'io.jsonwebtoken:jjwt-api:0.12.5'
-    // runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.5'
-    // runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.5'
-
-    // Password Encryption (BCrypt)
-    // implementation 'at.favre.lib:bcrypt:0.10.2'
+	//암호화spring-boot-starter-security
+    implementation 'org.springframework.security:spring-security-crypto:7.2.0-M2'
+	// jjwt-api 인터페이스 구현체 
+    implementation 'io.jsonwebtoken:jjwt-api:0.13.0'
+	// jjwt-impl 구현체
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.13.0'
+	// jjwt-jackson
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.13.0'
 
     // Database
    runtimeOnly 'org.postgresql:postgresql'
 
     // Lombok
-    // Source: https://mvnrepository.com/artifact/org.projectlombok/lombok
+    
     compileOnly 'org.projectlombok:lombok:1.18.42'
     annotationProcessor 'org.projectlombok:lombok:1.18.42'
 
