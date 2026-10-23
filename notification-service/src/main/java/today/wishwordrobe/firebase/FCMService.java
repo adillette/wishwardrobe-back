@@ -88,6 +88,9 @@ public class FCMService {
             if (request.getData() != null && !request.getData().isEmpty()) {
                 builder.putAllData(request.getData());
             }
+            if (request.getUrl() != null) {
+               builder.putData("url", request.getUrl());
+            }
 
             Message message = builder.build();
             //5. firebase 서버로 발송하고 응답을 받아온다

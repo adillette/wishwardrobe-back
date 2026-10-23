@@ -176,6 +176,9 @@ public class PushNotificationService {
                             .token(tokenDoc.getToken())
                             .title(request.getTitle())
                             .message(request.getMessage())
+                            .url(request.getUrl())
+                            .data(request.getData())
+                            .image(request.getImage())
                             .build();
 
                     long startTime = System.currentTimeMillis(); // // 시작 시간 기록
