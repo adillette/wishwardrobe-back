@@ -34,7 +34,7 @@ public class ClothesService {
     private final WeatherServiceClient weatherServiceClient;
     
     private static final int PER_CATEGORY_LIMIT = 2; 
-    private static final int LARGE_GAP = 10;
+    private static final int FALLBACK_RANGE = 3; // 같은 구간에 옷이 없을 때 위아래로 허용하는 구간 거리
 
     @Value ("${file.imageBaseUrl}")
     public String IMAGE_BASE_URL;
@@ -48,17 +48,14 @@ public class ClothesService {
         TempRange mainRange = TempRange.fromTemperature(calcAvgTemp(max,min));
         //메인 온도 범위 저장 calcAvgTemp 기존 dto 의존성 제거하고 최고 최저 기온으로 수정하여
         //Rabbitmq 컨슈머에서 사용할수 있도록함
-        TempRange outerRange;
-        if(hasLargeGap(max, min)){
-         outerRange= TempRange.fromTemperature(min.intValue());
-        }
-        else {
-            outerRange= mainRange;
-        }
+        //겉옷은 일교차와 관계없이 최저기온(아침/저녁 기준)으로 찾는다. 최저기온이 없으면 평균 구간 사용
+        TempRange outerRange = (min != null)
+                ? TempRange.fromTemperature(roundTemp(min))
+                : mainRange;
         //Hashset으로 두번 저장안되게 만들었음
         Set<TempRange> ranges = new HashSet<>();
-        ranges.addAll(withNeighbors(mainRange));
-        ranges.addAll(withNeighbors(outerRange));
+        ranges.addAll(withNeighbors(mainRange, FALLBACK_RANGE));
+        ranges.addAll(withNeighbors(outerRange, FALLBACK_RANGE));
         List<Clothes> candidates= clothesRepository.findByUserIdAndTempRangeIn(userId, ranges);
         //db에서 온도 range에 맞는 옷들 가져오기
 
@@ -228,34 +225,43 @@ public class ClothesService {
             private List<Clothes> pick(List<Clothes> candidates, ClothingCategory c, TempRange t, boolean exact){
                 return candidates.stream()
                 .filter(x -> x.getCategory() == c)
-                .filter(x -> exact ? x.getTempRange() == t : isNeighbor(x.getTempRange(), t))
-                .sorted(Comparator.comparing(Clothes::getCreatedAt,
-                        Comparator.nullsLast(Comparator.reverseOrder())))
+                .filter(x -> exact ? x.getTempRange() == t : isWithinFallback(x.getTempRange(), t))
+                // 폴백일 때는 가까운 구간을 먼저, 같은 거리면 최신순
+                .sorted(Comparator.comparingInt((Clothes x) -> rangeDistance(x.getTempRange(), t))
+                        .thenComparing(Clothes::getCreatedAt,
+                                Comparator.nullsLast(Comparator.reverseOrder())))
                 .limit(PER_CATEGORY_LIMIT)
                 .toList();
             }
 
-            private List<TempRange> withNeighbors(TempRange range){
+            //range 기준으로 위아래 radius 단계까지의 온도 범위를 모두 반환 (range 자신 포함)
+            private List<TempRange> withNeighbors(TempRange range, int radius){
                 TempRange[] all =TempRange.values();
                 List<TempRange> list = new ArrayList<>();
-                list.add(range);
                 //.ordinal() enum열거형에서 해당 상수가 선언된 순서를 숫자로 반환하는 메서드
                 //enum의 선언 순서에 따라 결정되고 enum 상수의 선언 순서 변경되면 ordinal값도 변경
-                if(range.ordinal()>0) list.add(all[range.ordinal()-1]);
-                //현재 온도 범위보다 한단계 낮은 온도 범위가 있으면 리스트에 추가
-                if(range.ordinal()<all.length-1) list.add(all[range.ordinal()+1]);
-                //현재 온도 범위보다 한단계 높은 온도 범위 있으면 리스트에 추가
+                int from = Math.max(0, range.ordinal()-radius);
+                int to = Math.min(all.length-1, range.ordinal()+radius);
+                for(int i=from; i<=to; i++){
+                    list.add(all[i]);
+                }
                 return list;
             }
 
-            //두 온도 범위의 순서 차이 정확히 1인지 확인
-            private boolean isNeighbor(TempRange a, TempRange b){
-                return a!=null && Math.abs(a.ordinal()-b.ordinal())==1;
+            //두 온도 범위의 순서 차이
+            private int rangeDistance(TempRange a, TempRange b){
+                return a==null ? Integer.MAX_VALUE : Math.abs(a.ordinal()-b.ordinal());
             }
 
-            //최고기온- 아침 최저기온 온도차 10도 이상 나는지 확인하는 메서드
-            private boolean hasLargeGap(Double max, Double min){
-                return max!=null && min!=null && (max-min)>=LARGE_GAP;
+            //같은 구간은 제외하고 FALLBACK_RANGE 단계 이내인지 확인
+            private boolean isWithinFallback(TempRange a, TempRange b){
+                int distance = rangeDistance(a, b);
+                return distance>=1 && distance<=FALLBACK_RANGE;
+            }
+
+            //소수점 온도를 반올림해서 int로 변환 (intValue()는 버림이라 경계에서 구간이 어긋남)
+            private int roundTemp(Double temp){
+                return (int) Math.round(temp);
             }
 
             //WeatherForecastDTO 대신 Double 2개를 받도록 변경 - 컨슈머도 같이 사용하기 위함
