@@ -7,6 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import today.wishwordrobe.configuration.PasswordMismatchException;
 import today.wishwordrobe.configuration.UnauthorizedException;
 import today.wishwordrobe.user.domain.Users;
@@ -19,6 +20,7 @@ import today.wishwordrobe.user.presentation.dto.response.UsersResponse;
 
 @RequiredArgsConstructor 
 @Service
+@Slf4j 
 public class UsersService {
      private final UserRepository userRepository;
     
@@ -79,10 +81,11 @@ public class UsersService {
         throw new PasswordMismatchException("비밀번호를 입력해주세요");
         }
         Users users = getLoginUser(userId);
-
+        
          if (!passwordEncoder.matches(rawPassword, users.getPassword())) {
             throw new PasswordMismatchException("비밀번호가 재확인 실패");
         }
+
     }
 
      private Users getLoginUser(Long userId) {

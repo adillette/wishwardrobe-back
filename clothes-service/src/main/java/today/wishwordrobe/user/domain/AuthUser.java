@@ -7,5 +7,5 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor 
 public class AuthUser {
    private final Long userId;
-private final String loginId;
+   private final String loginId;
 }

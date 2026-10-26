@@ -20,7 +20,7 @@ public class InterceptorConfig implements WebMvcConfigurer{
   @Override
   public void addInterceptors(InterceptorRegistry registry) {
     registry.addInterceptor(loginCheckInterceptor)
-        .addPathPatterns("/api/**") // /api 아래의 모든 요청에 토큰 검사를 건다
+        .addPathPatterns("/users/**") // /api 아래의 모든 요청에 토큰 검사를 건다
         .excludePathPatterns(
             "/api/users/register", // 가입은 토큰이 없는 사람이 호출하므로 검사에서 뺀다
             "/api/users/login"   // 로그인도 마찬가지다. 여기서 토큰을 처음 발급받는다
