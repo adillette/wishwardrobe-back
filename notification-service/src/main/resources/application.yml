@@ -7,9 +7,7 @@ spring:
 
   data:
     mongodb:
-
       uri: ${MONGODB_URI_NOTIFICATION}
-      #  uri: mongodb://wish:wish123@localhost:27017/wishnotification?authSource=wishnotification&maxPoolSize=1000&minPoolSize=100&maxWaitTime=5000&socketTimeout=10000&connectTimeout=5000
       auto-index-creation: true
     
     redis:
@@ -67,12 +65,7 @@ management:
     metrics:
       export:
         enabled: true
-      # enable: 
-      #   jvm: false
-      #   system: false
-      #   process: false 
-      #   executor: false
-      #   logback: false
+
 notification:
   daily:
     enabled: true

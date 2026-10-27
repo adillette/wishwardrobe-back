@@ -41,7 +41,7 @@ services:
 
 file:
   uploadFiles: /app/uploads
-  imageBaseUrl: ${IMAGE_BASE_URL:http://localhost:8081/api/clothes/images/}
+  imageBaseUrl: ${IMAGE_BASE_URL:https://api.wishward.cloud/api/clothes/images/}
 
 logging:
   level:
