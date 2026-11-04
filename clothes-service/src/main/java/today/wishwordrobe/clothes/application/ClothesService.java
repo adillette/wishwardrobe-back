@@ -6,11 +6,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.springframework.amqp.core.Binding;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +19,7 @@ import today.wishwordrobe.clothes.domain.Clothes;
 import today.wishwordrobe.clothes.domain.ClothesImageData;
 import today.wishwordrobe.clothes.domain.ClothesResponse;
 import today.wishwordrobe.clothes.domain.ClothingCategory;
+import today.wishwordrobe.clothes.domain.FileInfo;
 import today.wishwordrobe.clothes.domain.TempRange;
 import today.wishwordrobe.clothes.infrastructure.ClothesRepository;
 import today.wishwordrobe.clothes.infrastructure.client.WeatherServiceClient;
@@ -32,12 +34,31 @@ public class ClothesService {
    
     private final ClothesRepository clothesRepository;
     private final WeatherServiceClient weatherServiceClient;
-    
+    private final FileService fileService;
     private static final int PER_CATEGORY_LIMIT = 2; 
     private static final int FALLBACK_RANGE = 3; // 같은 구간에 옷이 없을 때 위아래로 허용하는 구간 거리
 
     @Value ("${file.imageBaseUrl}")
     public String IMAGE_BASE_URL;
+
+    //로그인한 Id= 옷장 주인ID 인지 확인(추가)
+    @Transactional(readOnly = true)
+    public Clothes getOwned(Long clothesId, Long userId){
+        Clothes clothes = clothesRepository.findByClothesId(clothesId);
+        if( clothes==null){
+            throw new IllegalArgumentException("해당 옷을 찾을 수 없습니다: "+ clothesId);
+        }
+
+        if(!clothes.getUserId().equals(userId)){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "본인 옷만 수정하거나 삭제할수 있습니다");
+        }
+        
+        return clothes;
+
+    } 
+
+
+
 
   
     // 추천
@@ -138,19 +159,43 @@ public class ClothesService {
     
     
     // 3.옷수정
-    public Clothes update(Clothes clothes) {
-        Clothes updatedClothes = clothesRepository.save(clothes);
+    @Transactional 
+    public ClothesResponse  update(Long clothesId, Long userId,
+        String name, ClothingCategory category, TempRange tempRange,
+        MultipartFile image) {
         
-        return updatedClothes;
+        Clothes clothes = getOwned(clothesId, userId);
+            
+        if(image !=null && !image.isEmpty()){
+            List<String> old = clothesRepository.getImagePaths(clothesId);
+            clothesRepository.deleteImages(clothesId);
+
+            FileInfo fileInfo = fileService.uploadFile(image, userId);
+            fileService.uploadImage(clothesId, fileInfo);
+            
+            old.forEach(fileService::deleteFile);
+
+        }
+
+        if (name != null && !name.isBlank()) clothes.setName(name);
+        if (category != null) clothes.setCategory(category);
+        if (tempRange != null) clothes.setTempRange(tempRange);
+
+
+        return toResponse(clothes);
+
+
+
     }
     
     // 4.옷삭제
-    public void deleteById(Long clothesId) {
+    public void deleteById(Long clothesId, Long userId) {
         // 삭제 전에 옷 정보를 조회 (이벤트에 필요한 정보 확보)
-        Clothes clothes = clothesRepository.findById(clothesId)
-        .orElseThrow(() -> new IllegalArgumentException("해당 옷을 찾을 수 없습니다: " + clothesId));
+        Clothes clothes =getOwned(clothesId, userId);
         
-        clothesRepository.deleteById(clothesId);
+        fileService.deleteImages(clothesId);   // // 파일 삭제 + 이미지 row 삭제. 옷 삭제보다 먼저 호출한다
+
+        clothesRepository.delete(clothes);
         
     }
     
