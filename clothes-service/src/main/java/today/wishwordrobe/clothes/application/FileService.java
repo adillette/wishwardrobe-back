@@ -11,7 +11,6 @@ import today.wishwordrobe.clothes.infrastructure.ClothesRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 
-
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.FileSystemUtils;
@@ -24,35 +23,34 @@ import java.io.IOException;
 @Transactional
 @Service
 @RequiredArgsConstructor
-//@Profile("dev")
+// @Profile("dev")
 public class FileService {
 
     private final ClothesRepository clothesRepository;
 
     @Value("${file.uploadFiles}")
-    private  String fileDir;
+    private String fileDir;
 
     /*
-    실제 로컬에 저장하는 uploadFile 메서드
+     * 실제 로컬에 저장하는 uploadFile 메서드
      */
     public FileInfo uploadFile(MultipartFile file, Long userId)
-                throws FileUploadException {
-        
+            throws FileUploadException {
+
         String newFileName = FileUtil.changeFileName(file);
-        
+
         checkDirectory(userId);
 
-        FileInfo fileInfo = createFileInfo(file,userId,newFileName);
+        FileInfo fileInfo = createFileInfo(file, userId, newFileName);
 
         clothesRepository.saveFilePath(
-                fileInfo.getFileName()
-                ,fileInfo.getFilePath()
-                ,userId);
+                fileInfo.getFileName(), fileInfo.getFilePath(), userId);
 
         return fileInfo;
     }
+
     /*
-     실제 로컬에 저장하는 uploadFiles 여러개 저장 메서드
+     * 실제 로컬에 저장하는 uploadFiles 여러개 저장 메서드
      */
     public List<FileInfo> uploadFiles(
             List<MultipartFile> files, Long userId) throws FileUploadException {
@@ -61,50 +59,44 @@ public class FileService {
         checkDirectory(userId);
 
         List<FileInfo> fileInfos = files.stream()
-                .map(file-> createFileInfo(
-                                file,userId,newFileNames.get(file.getOriginalFilename())))
+                .map(file -> createFileInfo(
+                        file, userId, newFileNames.get(file.getOriginalFilename())))
                 .collect(Collectors.toList());
 
-        clothesRepository.saveFilePathes(fileInfos,userId);
+        clothesRepository.saveFilePathes(fileInfos, userId);
 
         return fileInfos;
 
     }
 
-    public void uploadImage(Long id, FileInfo fileInfo){
-        ClothesImageUploadInfo imageUploadInfo =
-                FileUtil.toImageUploadInfo(id,fileInfo,1);
+    // 업로드 한 이미지 정보 저장
+    public void uploadImage(Long id, FileInfo fileInfo) {
+        ClothesImageUploadInfo imageUploadInfo = FileUtil.toImageUploadInfo(id, fileInfo, 1);
         clothesRepository.saveImage(
                 id,
                 imageUploadInfo.getImagePath(),
                 imageUploadInfo.getImageName(),
-                imageUploadInfo.getSeq()
-        );
+                imageUploadInfo.getSeq());
     }
 
-    public void uploadImages(Long id, List<FileInfo> fileInfos){
-        List<ClothesImageUploadInfo> imageUploadInfos = 
-                fileInfos.stream()
-                        .map(info -> FileUtil.toImageUploadInfo(id, info,fileInfos.indexOf(info)+1 ))
-                        .collect(Collectors.toList());
-        clothesRepository.uploadImages(id,imageUploadInfos);
+    // 업로드 한 이미지 정보 list에 저장
+    public void uploadImages(Long id, List<FileInfo> fileInfos) {
+        List<ClothesImageUploadInfo> imageUploadInfos = fileInfos.stream()
+                .map(info -> FileUtil.toImageUploadInfo(id, info, fileInfos.indexOf(info) + 1))
+                .collect(Collectors.toList());
+        clothesRepository.uploadImages(id, imageUploadInfos);
     }
-
-
+    //해당 옷 이미지 있는지 확인
     @Transactional(readOnly = true)
     public boolean isExistImages(Long clothesId) {
 
         return clothesRepository.isExistImages(clothesId);
     }
 
-    
-
-    
     public ClothesInfo getClothesInfo(Long clothesId) {
         return clothesRepository.getClothesInfo(clothesId);
-        
-    }
 
+    }
 
     public void deleteFile(String filePath) {
 
@@ -113,9 +105,8 @@ public class FileService {
         }
     }
 
-
     /*
-    디렉토리 삭제하기 이게 userId안에 들어있는 파일일거임 이거 해결은 어떻게 할지 고민해야함
+     * 디렉토리 삭제하기 이게 userId안에 들어있는 파일일거임 이거 해결은 어떻게 할지 고민해야함
      */
     public void deleteDirectory(Long userId) throws FileDeleteException {
 
@@ -131,8 +122,7 @@ public class FileService {
         }
         clothesRepository.deleteFilesByUserId(userId);
     }
-
-
+    //이미지 삭제
     public void deleteImages(Long clothesId) {
         List<String> imagePaths = clothesRepository.getImagePaths(clothesId);
 
@@ -140,6 +130,7 @@ public class FileService {
 
         clothesRepository.deleteImages(clothesId);
     }
+    //파일 디렉토리 체크
 
     private void checkDirectory(Long userId) {
 
@@ -154,7 +145,8 @@ public class FileService {
             directory.mkdir();
         }
     }
-private FileInfo createFileInfo(MultipartFile file, Long userId, String newFileName) throws FileUploadException{
+   //파일 생성
+    private FileInfo createFileInfo(MultipartFile file, Long userId, String newFileName) throws FileUploadException {
         StringBuilder filePath = new StringBuilder()
                 .append(fileDir)
                 .append(File.separator)
@@ -162,17 +154,14 @@ private FileInfo createFileInfo(MultipartFile file, Long userId, String newFileN
                 .append(File.separator)
                 .append(newFileName);
 
-        try{
+        try {
             file.transferTo(new File(String.valueOf(filePath)));
             FileInfo fileInfo = new FileInfo(newFileName, String.valueOf(filePath));
 
             return fileInfo;
         } catch (IOException e) {
-            throw new FileUploadException("파일 업로드하는데 실패하였습니다.",e);
+            throw new FileUploadException("파일 업로드하는데 실패하였습니다.", e);
         }
-}
-
-
-
+    }
 
 }
