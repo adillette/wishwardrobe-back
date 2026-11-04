@@ -31,7 +31,7 @@ public class JwtService {
   //   secretKey = Keys.hmacShaKeyFor(bytes);
   // }
   private SecretKey secretKey;
-  private long jwtDuration = 90 * 24 * 60 *60;
+  private long jwtDuration = 90L * 24 * 60 *60*1000;
 
   public JwtService(@Value ("${JWT_SECRET}") String secret) {
     this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
