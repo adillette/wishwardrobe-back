@@ -5,6 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -14,7 +15,8 @@ import lombok.RequiredArgsConstructor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import today.wishwordrobe.application.UserLocationService;
-import today.wishwordrobe.infrastructure.UserLocationDocument;
+
+import today.wishwordrobe.presentation.dto.SendNowRequest;
 import today.wishwordrobe.presentation.dto.UserLocationRequest;
 import today.wishwordrobe.presentation.dto.UserLocationResponse;
 @RestController
@@ -33,6 +35,15 @@ public class UserLocationController {
                    .map(ResponseEntity::ok);
     }
 
+    // 알림 버튼 클릭 시 즉시 푸시 (프론트가 현재 좌표 전달)
+    @PostMapping("/{userId}/send-now")
+    public Mono<ResponseEntity<Void>> sendNow(
+            @PathVariable("userId") long userId,
+            @RequestBody SendNowRequest request) {
+        return Mono.fromRunnable(() -> userLocationService.sendNow(userId, request.getLat(), request.getLon()))
+                .thenReturn(ResponseEntity.accepted().<Void>build());
+    }
+
     @GetMapping("/active")
     public Flux<UserLocationResponse> getActiveUserLocations() {
         return userLocationService.getActiveUserLocations();
@@ -41,7 +52,7 @@ public class UserLocationController {
     // 단건 조회
     @GetMapping("/{userId}")
     public Mono<ResponseEntity<UserLocationResponse>> getLocationByUserId(
-            @PathVariable long userId) {
+            @PathVariable("userId") long userId) {
         return userLocationService.getLocationByUserId(userId)
                 .map(ResponseEntity::ok)
                 .defaultIfEmpty(ResponseEntity.notFound().build());

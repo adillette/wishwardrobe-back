@@ -10,6 +10,8 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import today.wishwordrobe.infrastructure.UserLocationDocument;
 import today.wishwordrobe.infrastructure.UserLocationRepository;
+import today.wishwordrobe.messaging.WeatherRequestEvent;
+import today.wishwordrobe.messaging.WeatherRequestPublisher;
 import today.wishwordrobe.presentation.dto.UserLocationRequest;
 import today.wishwordrobe.presentation.dto.UserLocationResponse;
 
@@ -18,6 +20,18 @@ import today.wishwordrobe.presentation.dto.UserLocationResponse;
 @RequiredArgsConstructor
 public class UserLocationService {
     private final UserLocationRepository userLocationRepository;
+    private final WeatherRequestPublisher weatherRequestPublisher;
+
+    // 알림 버튼 클릭 시 7시 스케줄러와 동일한 파이프라인으로 즉시 발송
+    public void sendNow(long userId, double lat, double lon){
+      weatherRequestPublisher.publish(
+        WeatherRequestEvent.builder()
+            .userId(userId)
+            .lat(lat)
+            .lon(lon)
+            .build());
+      log.info("알림 즉시 발송 요청 - userId: {}", userId);
+    }
 
     public Flux<UserLocationResponse> getActiveUserLocations(){
       return userLocationRepository.findByEnabled(true)
