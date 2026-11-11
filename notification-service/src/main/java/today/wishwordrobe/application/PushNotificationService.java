@@ -245,8 +245,8 @@ public class PushNotificationService {
 
 
 
-    public Mono<Void> saveSubscription(Map<String, Object> subscriptionMap) {
-        Long userId = Long.valueOf(String.valueOf(subscriptionMap.get("userId")));
+    public Mono<Void> saveSubscription(Long userId,Map<String, Object> subscriptionMap) {
+        //Long userId = Long.valueOf(String.valueOf(subscriptionMap.get("userId")));
 
         WebPushSubscription subscription = new WebPushSubscription();
 
@@ -272,8 +272,10 @@ public class PushNotificationService {
     }
 
     // 토큰 1개 삭제
-    public Mono<Void> unregisterFcmToken(String token) {
-        return fcmTokenRepository.deleteById(token)
+    public Mono<Void> unregisterFcmToken(Long userId, String token) {
+        return fcmTokenRepository.findById(token)
+                .filter(doc->userId.equals(doc.getUserId())) // 사용자 ID가 일치하는 경우에만 삭제
+                .flatMap(doc->fcmTokenRepository.deleteById(token)) 
                 .doOnSuccess(v -> log.info("FCM 토큰 삭제: token={}", token));
     }
 
@@ -397,10 +399,14 @@ public class PushNotificationService {
         // 모든 작업 실행 후 결과 반환
         return Mono.when(tasks).thenReturn(results);
     }
-
-    public Mono<Void> unregisterWebPushSubscription(String endpoint) {
-        return webPushService.deleteByEndpoint(endpoint)
-                .doOnSuccess(v -> log.info("WebPush 구독 해제: endpoint={}", endpoint));
+    //내 구독인 경우에만 삭제
+    public Mono<Void> unregisterWebPushSubscription(Long userId, String endpoint) {
+        return webPushSubscriptionRepository.findById(endpoint)
+                .filter(doc-> userId.equals(doc.getUserId()))//사용자 ID가 일치하는 경우에만 삭제
+                .flatMap(doc-> webPushSubscriptionRepository.deleteById(doc.getEndpoint()))
+                .doOnSuccess(v->log.info("WebPush 구독 해제 시도: userId={}, endpoint={}", userId, endpoint));
+        
+        
     }
 
     public Mono<Void> unregisterAllWebPushByUserId(Long userId) {
