@@ -25,8 +25,9 @@ public class InterceptorConfig implements WebMvcConfigurer{
             "/users/register",
             "/users/login",
             "/api/users/register", // 가입은 토큰이 없는 사람이 호출하므로 검사에서 뺀다
-            "/api/users/login"   // 로그인도 마찬가지다. 여기서 토큰을 처음 발급받는다
-
+            "/api/users/login" ,  // 로그인도 마찬가지다. 여기서 토큰을 처음 발급받는다
+            "/clothes/images/**",       // 알림(FCM)이 토큰 없이 이미지를 받아야 함
+            "/api/clothes/images/**"
         );
   }
   @Bean
