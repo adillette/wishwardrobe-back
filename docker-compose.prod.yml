@@ -1,0 +1,138 @@
+version: '3.8'
+
+services:
+
+  # RabbitMQ 
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    networks:
+      - wishwordrobe-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+  
+    networks:
+      - wishwordrobe-network
+    restart: unless-stopped
+  postgres:
+    image: postgres:17-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - wishwordrobe-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U clothes -d clothes"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
+  gateway-service:
+    build:
+      context: ./gateway-service
+      dockerfile: Dockerfile
+    container_name: gateway-service
+    ports:
+      - "127.0.0.1:8080:8080"
+    env_file:
+      - .env
+    depends_on:
+      - clothes-service
+      - weather-service
+      - notification-service
+    networks:
+      - wishwordrobe-network
+    restart: unless-stopped
+
+  clothes-service:
+    build:
+      context: ./clothes-service
+      dockerfile: Dockerfile
+    container_name: clothes-service
+
+    env_file:
+      - .env
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      
+      
+    volumes:
+      - clothes-uploads:/app/uploads
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_started
+       
+    networks:
+      - wishwordrobe-network
+    restart: unless-stopped
+
+  weather-service:
+    build:
+      context: ./weather-service
+      dockerfile: Dockerfile
+    container_name: weather-service
+
+    env_file:
+      - .env
+    environment:
+      RABBITMQ_HOST: rabbitmq
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - wishwordrobe-network
+    restart: unless-stopped
+
+#metric와 포트 분리한 이유 보안 격리와 트래픽 분리
+  notification-service:
+    build:
+      context: ./notification-service
+      dockerfile: Dockerfile
+    container_name: notification-service
+
+    env_file:
+      - .env
+    environment:
+      RABBITMQ_HOST: rabbitmq
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    volumes:
+      - ./secrets/service-account-key.json:/app/service-account-key.json:ro
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - wishwordrobe-network
+    restart: unless-stopped
+
+networks:
+  wishwordrobe-network:
+    driver: bridge
+
+volumes:
+  clothes-uploads:
+  postgres-data:

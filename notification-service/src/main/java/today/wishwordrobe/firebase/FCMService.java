@@ -101,7 +101,9 @@ public class FCMService {
                    // 7. 발송 성공하면 이 토큰의 마지막 사용 시각을 DB에 갱신 (7일 미사용 토큰 정리 기준)
                 .flatMap(response ->
                     // 전송 성공 시 lastUsedAt 업데이트
-                    updateLastUsedAt(request.getToken()).thenReturn(response)
+                    updateLastUsedAt(request.getToken())
+                    .doOnSuccess(id -> log.info("FCM 수락 messageId={} ,token={}", id ,request.getToken()))
+                    .thenReturn(response)
                 )
                  // 8. 발송 실패하면 오류 코드를 보고 처리 (토큰이 만료(UNREGISTERED)된 경우 DB에서 삭제)
 
