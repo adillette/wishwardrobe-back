@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import today.wishwordrobe.auth.AuthUser;
 import today.wishwordrobe.infrastructure.UserLocationDocument;
 import today.wishwordrobe.infrastructure.UserLocationRepository;
 import today.wishwordrobe.messaging.WeatherRequestEvent;
@@ -23,7 +24,7 @@ public class UserLocationService {
     private final WeatherRequestPublisher weatherRequestPublisher;
 
     // 알림 버튼 클릭 시 7시 스케줄러와 동일한 파이프라인으로 즉시 발송
-    public void sendNow(long userId, double lat, double lon){
+    public void sendNow(Long userId, double lat, double lon){
       weatherRequestPublisher.publish(
         WeatherRequestEvent.builder()
             .userId(userId)
@@ -38,8 +39,8 @@ public class UserLocationService {
               .map(this::toResponse);
     }
 
-    public Mono<UserLocationResponse> updateLocation(UserLocationRequest request){
-      return userLocationRepository.findByUserId(request.getUserId())
+    public Mono<UserLocationResponse> updateLocation(Long userId, UserLocationRequest request){
+      return userLocationRepository.findByUserId(userId)
               .flatMap(existing->{
                 existing.setLat(request.getLat());
                 existing.setLon(request.getLon());
@@ -50,10 +51,11 @@ public class UserLocationService {
               .switchIfEmpty(
                 userLocationRepository.save(
                   UserLocationDocument.builder()
-                            .userId(request.getUserId())
+                            .userId(userId)
                             .lat(request.getLat())
                             .lon(request.getLon())
                             .enabled(request.isEnabled())
+                            .updatedAt(LocalDateTime.now())
                             .build()
                           )
                         ).map(this::toResponse);
