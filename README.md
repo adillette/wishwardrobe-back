@@ -7,7 +7,7 @@
 
 ---
 
-## 기술 스택
+## Skills
 Java, Spring WebFlux, MongoDB , PostgreSQL , FCM , Web Push API, RabbitMQ, Redis, LightSail , Vercel, Docker, GitHub , Vue.js
 
 
